@@ -3,92 +3,93 @@ from PIL import ImageTk, Image
 import math, random
 import time
 import os
-#import _thread
+import _thread
 
-
+pressedkeys=[]
 
 class Camera:
     def __init__(self, pos=(0,0,0), rot=(0,0)):
         self.pos = list(pos)
         self.rot = list(rot) #rot=rotation
 
-def walk_forward(event):
-    global cos, sin
-    x,y = sin[1]*sensMouv, cos[1]*sensMouv
-    cam.pos[0]+=x
-    cam.pos[2]+=y
+def keydown(event):
+    if event.keysym not in pressedkeys:
+        pressedkeys.append(event.keysym)
 
-def keypress(event):
+def keyup(event):
+    if event.keysym in pressedkeys:
+        pressedkeys.pop(pressedkeys.index(event.keysym))
+
+def movement():
     """Calcule le déplacement et l'ordre d'affichage des objets en fonction de l'input."""
-    #deplacement
+
+    sensMouv = 1/10 #sensibilite des mouvements
+    sensRot = 1/40 #sensibilite de la rotation
+    # import time as time
     global cos, sin
-    x,y = sin[1]*sensMouv, cos[1]*sensMouv
-    if event.keysym == 'd':
-        cam.pos[0]+=y
-        cam.pos[2]-=x
-    elif event.keysym == 'a':
-        cam.pos[0]-=y
-        cam.pos[2]+=x
-    # elif event.keysym == 'w':
-    #     cam.pos[0]+=x
-    #     cam.pos[2]+=y
-    elif event.keysym == 's':
-        cam.pos[0]-=x
-        cam.pos[2]-=y
+    while(1):
+        time.sleep(0.01)
+        for key in pressedkeys:
+            cos = (math.cos(cam.rot[0]), math.cos(cam.rot[1]))
+            sin = (math.sin(cam.rot[0]), math.sin(cam.rot[1]))
 
-    elif event.keysym == 'q':
-        cam.pos[1]+=sensMouv
-    elif event.keysym == 'e':
-        cam.pos[1]-=sensMouv
+            x,y = sin[1]*sensMouv, cos[1]*sensMouv
+            if key == 'd':
+                cam.pos[0]+=y
+                cam.pos[2]-=x
+            elif key == 'a':
+                cam.pos[0]-=y
+                cam.pos[2]+=x
+            elif key == 'w':
+                cam.pos[0]+=x
+                cam.pos[2]+=y
+            elif key == 's':
+                cam.pos[0]-=x
+                cam.pos[2]-=y
 
-    #exit
-    elif event.keysym == 'Escape':
-        root.destroy()
+            elif key == 'q':
+                cam.pos[1]+=sensMouv
+            elif key == 'e':
+                cam.pos[1]-=sensMouv
 
-    #rotation
-    # axe X     axe Y
-    # rot[1]    rot[0]
-    elif event.keysym == 'Left':
-        cam.rot[1]-=sensRot
-    elif event.keysym == 'Right':
-        cam.rot[1]+=sensRot
-    elif event.keysym == 'Up':
-        cam.rot[0]-=sensRot
-    elif event.keysym == 'Down':
-        cam.rot[0]+=sensRot
+            #exit
+            elif key == 'Escape':
+                root.destroy()
 
-    cos = (math.cos(cam.rot[0]), math.cos(cam.rot[1]))
-    sin = (math.sin(cam.rot[0]), math.sin(cam.rot[1]))
-    ##########################################################
-    # REVOVE NOT SHOWED OBJECTS
-    #mettre ça ici permet d'améliorer le framerate
-    #on calcule dans quel ordre dessiner chaque cube - *on retire ceux qui sont hors champ*
-    global objects
-    for obj in objects :
-        obj.show = False
-        #On calcule la position du centre de chaque objet pour determiner si il doit etre affiché et dans quel ordre il doit etre dessiné
-        x,y,z = obj.pos    
-        x-=cam.pos[0]
-        y-=cam.pos[1]
-        z-=cam.pos[2]
+            #rotation
+            # axe X     axe Y
+            # rot[1]    rot[0]
+            elif key == 'Left':
+                cam.rot[1]-=sensRot
+            elif key == 'Right':
+                cam.rot[1]+=sensRot
+            elif key == 'Up':
+                cam.rot[0]-=sensRot
+            elif key == 'Down':
+                cam.rot[0]+=sensRot
 
-        x,z = x*cos[1]-z*sin[1], z*cos[1]+x*sin[1]   #x et z modifies par la rotation autour de y
-        y,z = y*cos[0]-z*sin[0], z*cos[0]+y*sin[0]   #y et z modifies par la rotation autour de x
+        global objects
+        for obj in objects :
+            obj.show = False
+            #On calcule la position du centre de chaque objet pour determiner si il doit etre affiché et dans quel ordre il doit etre dessiné
+            x,y,z = obj.pos    
+            x-=cam.pos[0]
+            y-=cam.pos[1]
+            z-=cam.pos[2]
 
-#il y a un probleme si l'angle cam.rot[1] est multiple de 3 ?!
+            x,z = x*cos[1]-z*sin[1], z*cos[1]+x*sin[1]   #x et z modifies par la rotation autour de y
+            y,z = y*cos[0]-z*sin[0], z*cos[0]+y*sin[0]   #y et z modifies par la rotation autour de x
 
-        if z>0:
-            #si z=0 on a une division par 0 et si z<0 alors l'affichage est hors champ
-            f=SWidth/z #coefficient de stereoscopie 
-            X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
+            if z>0:
+                #si z=0 on a une division par 0 et si z<0 alors l'affichage est hors champ
+                f=SWidth/z #coefficient de stereoscopie 
+                X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
 
-            if X<WIDTH+SWidth and Y<HEIGHT+SHeight and X>-SWidth and Y>-SHeight: #peu d'impact sur framerate
-                obj.depth = (x**2)+(y**2)+(z**2)
-                #print(obj.depth, obj.color, "pos :", x,y,z)
-                obj.show = True
+                if X<WIDTH+SWidth and Y<HEIGHT+SHeight and X>-SWidth and Y>-SHeight: #peu d'impact sur framerate
+                    obj.show = True
 
-    objects.sort(key=lambda obj: obj.depth, reverse=True) #on ordonne objects selon l'ordre de depth
-    ############################################################# impact *très minime* sur le framerate
+
+
 
 
 
@@ -110,7 +111,7 @@ class Ext3DModel:
     vertices = []
     faces = []          #self.faces = ( ((v,v,v,...),(vn,vn,vn,...)), ((v,v,v,...),(vn,vn,vn,...)), ..... )
     normals = []
-    depth=0
+    #depth=0
     show=True
     def __init__(self, fileName, position=(0,0,0), color="white", fileOindex=1):
         '''Créé un objet à partir d\'un fichier .obj.'''
@@ -124,9 +125,9 @@ class Ext3DModel:
                 oNumber+=1
             elif line[0] == "v" and line[1] == " " and (oNumber==fileOindex or oNumber==0):
                 arr=[]
-                ass = line[1:].split()
-                for fuck in ass:
-                    arr.append(float(fuck))
+                vertices = line[1:].split()
+                for vertex in vertices:
+                    arr.append(float(vertex))
                 self.vertices.append(tuple( arr ))
             elif line[0] == "v" and line[1] == "n" and (oNumber==fileOindex or oNumber==0):
                 arr=[]
@@ -159,13 +160,10 @@ class Ext3DModel:
 
 
 if __name__ == '__main__':
-    WIDTH = 600
-    HEIGHT = 600
+    WIDTH = 1000
+    HEIGHT = 1000
     SWidth, SHeight = WIDTH//2, HEIGHT//2 #semi width and semi height
-    sensMouv = 1 #sensibilite des mouvements
-    sensRot = 1/4 #sensibilite de la rotation
     colors  = ((167,0,0), (0,200,0), (0,0,108), (20,100,230), (50,150,50))
-
     cam = Camera((0,0,-3)) #position initiale de la caméra
 
 #Crétation de la liste des objets à afficher
@@ -175,14 +173,11 @@ if __name__ == '__main__':
     #     for z in range(-5, 5):
     #         objects.append(FloorPannel((x,0,z),(255,255,255)))
     ###############################
-    # for x in range(0,4,2):
-    #     for z in range(0,4,2):
-    #         for y in range(0,-4,-2):
-    #             objects.append( Ext3DModel("cube_big",(x,y,z),random.choice(colors)) )
 
-    objects.extend( [Ext3DModel("cube",(0,0,0),((255,255,255))), Ext3DModel("cube",(2,0,0), (0,0,255)), Ext3DModel("cube",(-2,0,0), (0,255,0))] )        
-    #objects.append(Ext3DModel("body_highpoly",(0,0,0),(255,255,255) ))
-
+    #objects.extend([ Ext3DModel("cube",(x,y,z),random.choice(colors)) for y in range(0,-3,-1) for z in range(0,3,1) for x in range(0,3,1)  ])
+    #objects.extend([ Ext3DModel("cube_big",(x,y,z),random.choice(colors)) for y in range(0,-4,-2) for z in range(0,4,2) for x in range(0,4,2)  ])
+    #objects.extend( [Ext3DModel("cube",(0,0,0),((255,255,255))), Ext3DModel("cube",(2,0,0), (0,0,255)), Ext3DModel("cube",(-2,0,0), (0,255,0))] )        
+    objects.append(Ext3DModel("body_highpoly",(1,1,1),(255,255,255) ))
 
 
 
@@ -194,9 +189,8 @@ if __name__ == '__main__':
 
     canvas = tkinter.Canvas(frame, width=WIDTH, height=HEIGHT, bg="#ffffff")
     canvas.grid(row=0, column=0, sticky=tkinter.N+tkinter.S+tkinter.E+tkinter.W)
-    root.bind("<Key>", keypress)
-
-    root.bind("w", walk_forward)
+    root.bind("<KeyPress>", keydown)
+    root.bind("<KeyRelease>", keyup)
 
     frame.pack()
 
@@ -210,41 +204,24 @@ if __name__ == '__main__':
     canvas.create_image(SWidth, SHeight, image=tkimg) #SWidth et SHeight servent a mettre le milieu de l'image au centre du canvas
 
 
-
+    #car movement() utilise cos et sin :
     cos = (0,0)
     sin = (1,1)
-    #i,frameRate=0,0
+
+    _thread.start_new_thread(movement, ( ))
+    i,frameRate=0,0
     while True:
-        #t0 = time.time()
-        objects.sort(key=lambda x: x.depth, reverse=True)
+        t0 = time.time()
+
+  
+
+        face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), tuple(couleur), int(profondeur) ], [ (x,y),...], ...]
         #on calcule comment dessiner chaque cube        
         for obj in objects :
-            if obj.show :
-                # TODO = SKIP SOME POLY WHEN OBJECT IS FAR
-                face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), tuple(couleur), int(profondeur) ], [ (x,y),...], ...]
+            if obj.show:
                 for face in obj.faces:
                     depth = 0
                     face_points = [] #contient 3 ou plus sommets a connecter -> (x,y),(x,y),(x,y)
-
-                    #chaque point de la face a une normale, on fait la moyenne de ces normales pour avoir la normale de la face (on ne calcule que la coordonnée "z" du vecteur car les autres ne sont pas utilisées)
-                    nz = sum( [obj.normals[face[1][n] -1][2] for n in range( len(face[1])-1 )  ] ) / (len(face[1])-1)
-
-
-                    #Si ß est l'angle entre 2 vecteurs u et n, cos(ß)=(u.n)/(||u||*||n||) or ici ||u||=||n||=1 ; Donc cos(ß)=(u.n)
-                    #Aussi, u=lightsource=(0,0,1) ; donc u.n = uz*nz = nz
-                    #On peut maintenant utiliser nz=cos(ß) comme pourcentage de lumiere recue.
-                    lightReceived = nz + 0.2
-
-                    faceColor=[]
-                    for colorComponent in obj.color:
-                        component = int(colorComponent*lightReceived)
-                        if component>255:
-                            component=255
-                        elif component<5:
-                            component=5
-
-                        faceColor.append(component) 
-                    faceColor=tuple(faceColor)
 
                     #obj.faces = ( ((v,v,v,...),(vn,vn,vn,...)), ((v,v,v,...),(vn,vn,vn,...)),..... )
                     #face = ((v,v,v,...),(vn,vn,vn,...))
@@ -255,7 +232,6 @@ if __name__ == '__main__':
 
                         x,z = x*cos[1]-z*sin[1], z*cos[1]+x*sin[1] #x et z modifies par la rotation autour de y
                         y,z = y*cos[0]-z*sin[0], z*cos[0]+y*sin[0] #y et z modifies par la rotation autour de x
-
 
                         if not z>0:
                             #si z=0 on a une division par 0 et si z<0 alors l'affichage est hors champ
@@ -270,33 +246,31 @@ if __name__ == '__main__':
                             break
                         
                         face_points.append((X,Y)) 
-                        depth += (x**2)+(y**2)+(z**2) #se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
+                        depth += (x**2)+(y**2)+(z**2) #se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D     
 
                     if face_points is not None:
-                        #si il n'y a pas au moins 1 des points qui sort de l'écran
+                        #si il n'y a pas 1 ou des points qui sort de l'écran
+
+                        #Calcule shaders
+                        nz = sum( [obj.normals[face[1][n] -1][2] for n in range( len(face[1])-1 )  ] ) / (len(face[1])-1) + 0.2 #moyenne des coordonnes "z" des normales, +0.2 pour eviter d'avoir des endroits avec 0 lumiere
+                        
+                        faceColor = tuple([ 5 if colorComponent*nz<5. else 255 if colorComponent*nz>255. else int(colorComponent*nz) for colorComponent in obj.color ])
+                        ######
                         face_points.extend( (faceColor, depth) ) #face_points[4] est dedié à la couleur ; face_point[5] dedié à la profondeur
                         face_list.append(face_points)
-            
-                ##DO THE DRAWING HERE
-                face_list.sort(key=lambda x: x[-1], reverse=True)
-                #slicing lists is a bad idea
-                for face in face_list: #on ne dessine que les 3 faces maximum visibles simultanément -> pls vrais avec un modele contenant masse faces
-                    #TODO = use canvas.move
-                    canvas.create_polygon(face[:-2], fill='#%02x%02x%02x' % face[-2], tag="faces") #la couleur est transformée de RGB en hexadecimal
+        
+        
+        face_list.sort(key=lambda x: x[-1], reverse=True)
+        for face in face_list:
+            canvas.create_polygon(face[:-2], fill='#%02x%02x%02x' % face[-2], tag="faces") #la couleur est transformée de RGB en hexadecimal
 
 
-
-        ##tLOL = time.time()
-        ######################################################################
-        #on remet l'image à 0
         root.update()
         canvas.delete("faces")
-        ###################################################################### super lent, tank les fps
-        ##print(( time.time()-tLOL ), "canvas delete")
 
-        #frameRate += time.time()-t0
-        #i+=1
-        #if i > 50 :
-            #print(1/((frameRate/i)+1e-10),"fps")
-            #i=0
-            #frameRate=0
+        frameRate += time.time()-t0
+        i+=1
+        if i > 50 :
+            print(1/((frameRate/i)+1e-10),"fps")
+            i=0
+            frameRate=0
