@@ -2,6 +2,7 @@ import tkinter
 import PIL
 from PIL import ImageTk, Image, ImageDraw
 import math, random
+from threading import Thread
 
 WIDTH = 1000
 HEIGHT = 1000
@@ -67,12 +68,22 @@ class Cube:
     edges = (0,1),(1,2),(2,3),(3,0), (0,4), (1,5),(2,6),(3,7), (4,5),(5,6),(6,7),(7,4) #ne sert a rien
     faces = (4,5,6,7),(0,3,7,4),(1,2,6,5),(3,2,6,7),(0,1,5,4),(0,1,2,3)
 
-    def __init__(self, position=(0,0,0)):
+    def __init__(self, position=(0,0,0), color="white"):
         x,y,z = position
         #on calcule les coordonnees de chaque arrete du cube en fonction de ses dimensions originales et sa position dans l'espace
         # X Y Z = position autour de l'origine
         self.vertices = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.verts]
         #jsp pas pq faut diviser par 2 mais ça fonctionne mieux
+        self.color=color
+
+class FloorPannel:
+    verts = (1,1,1),(1,1,-1),(-1,1,-1),(-1,1,1)
+    edges = (0,1),(1,2),(2,3),(3,0)
+    faces = (0,1,2,3), (0,0,0,0) #un obj a besoin de 2 faces minimum
+    def __init__(self, position=(0,0,0), color="white"):
+        x,y,z = position
+        self.vertices = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.verts]
+        self.color=color
     
 def clamp (val, minval, maxval):
     "retourne val, compris entre minval et maxval"
@@ -95,7 +106,12 @@ frame.pack()
 
 
 cam = Camera((0,0,-6))
-cubes = [Cube((0,0,0)),Cube((2,0,0)), Cube((-2,0,0))]
+#objects = [Cube((0,0,0),"red"),Cube((2,0,0), "blue"), Cube((-2,0,0), "yellow")]
+
+objects = []  
+for x in range(20):
+    for z in range(20):
+        objects.append(Cube((x,0,z),"white"))
 
 while True:
     # chaque frame sera PILimg
@@ -103,15 +119,16 @@ while True:
     
 
     #### Création d'une liste de faces et leur profondeur
-    face_list=[] #contient : [points1, points2, ...] => [ [ [x,y],[x,y],[x,y],[x,y] ], [ [x,y],...], ...]
+    face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y) ], [ (x,y),...], ...]
     depth_list=[]
+    face_color=[]
 
     #on calcule comment dessiner chaque cube
-    for cube in cubes :
-        for face in cube.faces:
+    for obj in objects :
+        for face in obj.faces:
             depth = 0
             face_points = [] #contient 4 sommets a connecter
-            for x,y,z in (cube.vertices[face[0]], cube.vertices[face[1]], cube.vertices[face[2]], cube.vertices[face[3]]):
+            for x,y,z in (obj.vertices[face[0]], obj.vertices[face[1]], obj.vertices[face[2]], obj.vertices[face[3]]):
                 #le monde bouge par rapport a la camera et non le contraire
                 x-=cam.pos[0]
                 y-=cam.pos[1]
@@ -126,23 +143,31 @@ while True:
 
                 #x et y doivent cerrespondre a des pixels du canvas ! (on evite le index out of range)
                 #TODO changer ça pour un truc qui fonctionne vraiment
-                x = clamp(x,0,WIDTH)
-                y = clamp(y,0,HEIGHT)
+                ##x = clamp(x,0,WIDTH)
+                ##y = clamp(y,0,HEIGHT)
 
-                face_points.append([x,y]) 
-                depth += z**4 #on exacèrbe la profondeur, TODO ne pa la calculer que a partir de z
-		
-            face_points.append([colors[cube.faces.index(face)]]) #face_points[4][0] est dedié à la couleur
+                if z<0:
+                    depth -= z**4
+                else:
+                    face_points.append((x,y)) 
+                    depth += z*(1000000)+x+y #TODO un meilleur calcul
+                    #le profondeur ne depend pas que de z pour pas melanger les faces à Z égal
+
+            #if set(tuple(face_points)) != set(i for i in face_list):
+            face_color.append( obj.color ) #face_points[4][0] est dedié à la couleur
             depth_list.append(depth)
-            face_list.append(face_points)
+            face_list.append(tuple(face_points))
 
 
     #dessiner faces, le final
     face_list=[x for _,x in sorted(zip(depth_list,face_list), reverse=True)] #on ordonne face_list selon l'ordre de depth_list
+    face_color=[x for _,x in sorted(zip(depth_list,face_color), reverse=True)]
     draw = ImageDraw.Draw(PILimg)
     for face in face_list :
-        color=face[4][0]
-        draw.polygon((tuple(face[0]),tuple(face[1]),tuple(face[2]),tuple(face[3])), fill=color, outline="black")
+        color=face_color[face_list.index(face)]
+        if len(face) > 1 :
+            #si il y a au moins un trai à dessiner
+            draw.polygon(face, fill=color, outline="black")
     del draw
 
     #afficher image
