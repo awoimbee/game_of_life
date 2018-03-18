@@ -57,6 +57,13 @@ def keypress(event):
     elif event.keysym == 'Down':
         cam.rot[0]+=sensRot
 
+    elif event.keysym == 'f':
+        global fastCoeff
+        if fastCoeff <0.7:
+            fastCoeff+=0.1
+        else :
+            fastCoeff=0
+        print("rendu rapide niveau", (fastCoeff*100//0.7), "%" )
 
     ##########################################################
     # REVOVE NOT SHOWED OBJECTS
@@ -64,8 +71,9 @@ def keypress(event):
     #on calcule dans quel ordre dessiner chaque cube - *on retire ceux qui sont hors champ*
     global objects
     for obj in objects :
-        obj.show = True ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! DEBUG
-        x,y,z = obj.pos     #tout cela est calculé à partir du centre de chaque cube
+        obj.show = False ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! DEBUG
+        #On calcule la position du centre de chaque objet pour determiner si il doit etre affiché et dans quel ordre il doit etre dessiné
+        x,y,z = obj.pos    
         x-=cam.pos[0]
         y-=cam.pos[1]
         z-=cam.pos[2]
@@ -78,10 +86,10 @@ def keypress(event):
             f=SWidth/z #coefficient de stereoscopie 
             X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
 
-            if X<WIDTH+SWidth and Y<HEIGHT+SHeight and X>-SWidth and Y>-SHeight: #peu d'impact sur framerate
-                obj.depth = (x**2)+(y**2)+(z**2)
-                obj.show = True
-    ############################################################# super fast
+            #if X<WIDTH+SWidth and Y<HEIGHT+SHeight and X>-SWidth and Y>-SHeight: #peu d'impact sur framerate
+            obj.depth = (x**2)+(y**2)+(z**2)
+            obj.show = True
+    ############################################################# impact *très minime* sur le framerate
 
 
 def clamp (val, minval, maxval):
@@ -124,7 +132,8 @@ class FloorPannel:
 
 class Ext3DModel:
     vertices = []
-    faces = []  
+    faces = []          #self.faces = ( ((v,v,v,...),(vn,vn,vn,...)), ((v,v,v,...),(vn,vn,vn,...)), ..... )
+    normals = []
     depth=0
     show=True
     def __init__(self, fileName, position=(0,0,0), color="white", fileOindex=0):
@@ -140,27 +149,35 @@ class Ext3DModel:
             elif line[0] == "v" and line[1] == " ":
                 arr=[]
                 ass = line[1:].split()
-                #print(ass)
                 for fuck in ass:
                     arr.append(float(fuck))
                 self.vertices.append(tuple( arr ))
+            elif line[0] == "v" and line[1] == "n":
+                arr=[]
+                ass = line[2:].split()
+                for fuck in ass:
+                    arr.append(float(fuck))
+                self.normals.append(tuple( arr ))
             elif line[0] == "f" and line[1] == " ":
-                fuck = line[1:].split()
-                values=[]
-                for die in fuck:
-                    lol = die.split("/")
-                    values.append( int(lol[0]) )
-                self.faces.append( tuple(values) )
+                arr_line = line[1:].split() #arr_line = [v/vt/vn],[v,vt,vn],[v,vt,vn],...
+                face_vertices=[]
+                face_normals=[]
+                for str_face in arr_line:               #str_face = v/vt/vn
+                    arr_v_vt_vn = str_face.split("/")   #arr_v_vt_vn = [v,vt,vn]                         contient littéralement les infos des points, textures et normales
+                    face_vertices.append( int(arr_v_vt_vn[0]) )
+                    face_normals.append( int(arr_v_vt_vn[2]) )
+
+                result = (tuple(face_vertices), tuple(face_normals)) #result = ((v,v,v,...),(vn,vn,vn,...))
+                self.faces.append( result )                          #self.faces = ( ((v,v,v,...),(vn,vn,vn,...)), ((v,v,v,...),(vn,vn,vn,...)), .... )
             elif line[0] == "o" and line[1] == " ":
                 #TODO = create another object
                 print("fuck off")
-                self.vertices=[]
-                self.faces=[]
                 break
         x,y,z = position
         self.pos = position
         self.vertices = [(x+X/2, -y-Y/2, -z-Z/2) for X,Y,Z in self.vertices]
         self.color=color
+        print(self.faces[0])
 
 
 ##Création de la fenetre
@@ -199,14 +216,14 @@ objects = []
 #            objects.append(Cube((x,y,z),random.choice(colors)))
 
 #objects.extend( [Ext3DModel("cube",(0,0,0),((255,0,0))), Ext3DModel("cube",(2,0,0), (0,0,255)), Ext3DModel("cube",(-2,0,0), (0,255,0))] )        
-#objects.append(Ext3DModel("body_highpoly",(0,0,0),(255,0,0) ))
+#objects.append(Ext3DModel("LowPolyPickup",(0,0,0),(255,155,255) ))
 for x in range(0,2):
     for z in range(0,2):
         for y in range(0,-2,-1):
             objects.append( Ext3DModel("cube_big",(x,y,z),(255,155,255)) )
 
-crop = int(len(objects)/10) #le nombre d'objets qui ne seront pas affiches, meme si ils sont a l'ecran #optimisation
 i,frameRate=0,0
+fastCoeff=0
 while True:
     t0 = time.time()
 
@@ -217,15 +234,21 @@ while True:
     #on affiche pas les objets les plue eloignes
     
     #on calcule comment dessiner chaque cube
-    for obj in objects[crop:] :
+    
+    for obj in objects :
         if obj.show :
-            # TODO = SKID SOME POLY WHEN OBJECT IS FAR
+            # TODO = SKIP SOME POLY WHEN OBJECT IS FAR
             face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), tuple(couleur), int(profondeur) ], [ (x,y),...], ...]
             for face in obj.faces:
                 
                 depth = 0
-                face_points = [] #contient 3 sommets a connecter -> (x,y),(x,y),(x,y)
-                for x,y,z in (obj.vertices[face[0]-1], obj.vertices[face[1]-1], obj.vertices[face[2]-1]): #, obj.vertices[face[3]-1]
+                face_points = [] #contient 3 ou plus sommets a connecter -> (x,y),(x,y),(x,y)
+
+                #obj.faces = ( ((v,v,v,...),(vn,vn,vn,...)), ((v,v,v,...),(vn,vn,vn,...)),..... )
+                #face = ((v,v,v,...),(vn,vn,vn,...))
+                #face[0] = liste des points à connecter, face[1]=list des normales wtf c'est trop chaud
+                for vertid in face[0]:
+                    x,y,z = obj.vertices[vertid-1] 
                     #le monde bouge par rapport a la camera et non le contraire
                     x-=cam.pos[0]
                     y-=cam.pos[1]
@@ -235,15 +258,14 @@ while True:
                     y,z = y*cos[0]-z*sin[0], z*cos[0]+y*sin[0] #y et z modifies par la rotation autour de x
 
 
-                    
                     if not z>0:
                         #si z=0 on a une division par 0 et si z<0 alors l'affichage est hors champ
                         face_points=None
                         break
                     
                     f=SWidth/z #coefficient de stereoscopie 
-                    X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
-                    if not X<WIDTH+10 and not Y<HEIGHT+10 and not X>-10 and not Y>-10: #should be the following, has been cut for performance not X<WIDTH+SWidth and not Y<HEIGHT+SHeight and not X>-SWidth and not Y>-SHeight
+                    X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D ; +SWidth et SHeight car le repere xyz est placé au milieu de l'ecran
+                    if not X<WIDTH+50 or not Y<HEIGHT+50 or not X>-50 or not Y>-50: #should be the following, has been cut for performance not X<WIDTH+SWidth and not Y<HEIGHT+SHeight and not X>-SWidth and not Y>-SHeight
                         #on affiche pas ce qui est hors champ
                         face_points=None
                         break
@@ -252,20 +274,22 @@ while True:
                     depth += (x**2)+(y**2)+((z**2)*2) #se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
 
                 if face_points is not None:
-                    #si il y a au moins 2 points à connecter
-                    divider = depth / 300
-                    color = tuple([ int(clamp((val)-divider, 0, 255)) for val in obj.color  ])
-                    face_points.extend( (color, depth) )
-                    #face_points[4] est dedié à la couleur, cela permet une meilleure optimisation (20fps au lieu de 10!) ; face_point[5] dedié à la profondeur
+                    #si il n'y a pas au moins 1 des points qui sort de l'écran
+                    # bad attempt at simple shading
+                    #divider = depth / 300
+                    #color = tuple([ int(clamp((val)-divider, 0, 255)) for val in obj.color  ])
+                    face_points.extend( (obj.color, depth) ) #face_points[4] est dedié à la couleur ; face_point[5] dedié à la profondeur
                     face_list.append(face_points)
         
             ##DO THE DRAWING HERE
+
             face_list.sort(key=lambda x: x[-1], reverse=True)
+            #slicing lists is a bad idea
             for face in face_list: #on ne dessine que les 3 faces maximum visibles simultanément -> pls vrais avec un modele contenant masse faces
                 #TODO = use canvas.move
                 #TODO = remove outline and make shader
                 color = '#%02x%02x%02x' % face[-2]
-                canvas.create_polygon(face[:-2], fill=color, tag="faces", outline="black")
+                canvas.create_polygon(face[:-2], fill=color, outline="black", tag="faces")
 
 
 
