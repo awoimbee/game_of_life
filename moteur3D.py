@@ -3,15 +3,9 @@ from PIL import ImageTk, Image
 import math, random
 import time
 import os
-import _thread
+#import _thread
 
-WIDTH = 1500
-HEIGHT = 1000
-SWidth, SHeight = WIDTH//2, HEIGHT//2 #semi width and semi height
-sensMouv = 1/5 #sensibilite des mouvements
-sensRot = 1/10 #sensibilite de la rotation
 
-colors  = ("#6D8572", "#FAE705", "#343A83", "#00FF00", "#FFB400", "#AD009E")
 
 class Camera:
     def __init__(self, pos=(0,0,0), rot=(0,0)):
@@ -84,19 +78,13 @@ def keypress(event):
         if z>0:
             #si z=0 on a une division par 0 et si z<0 alors l'affichage est hors champ
             f=SWidth/z #coefficient de stereoscopie 
-            X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
+            #X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
 
             #if X<WIDTH+SWidth and Y<HEIGHT+SHeight and X>-SWidth and Y>-SHeight: #peu d'impact sur framerate
             obj.depth = (x**2)+(y**2)+(z**2)
             obj.show = True
     ############################################################# impact *très minime* sur le framerate
 
-
-def clamp (val, minval, maxval):
-    "retourne val, compris entre minval et maxval"
-    if val < minval: return minval
-    if val > maxval: return maxval
-    return val
 
 
 # class Cube: #NEEDS UPDATING
@@ -120,7 +108,7 @@ def clamp (val, minval, maxval):
 class FloorPannel:
     vertices = (1,1,1),(1,1,-1),(-1,1,-1),(-1,1,1)
     #edges = (0,1),(1,2),(2,3),(3,0)
-    faces = ((0,1,2), (0,3,2)) #un obj a besoin de 2 faces minimum
+    faces = ((0,1,2,4),) #un obj a besoin de 2 faces minimum
     depth=0
     show=True
     def __init__(self, position=(0,0,0), color="white"):
@@ -180,130 +168,179 @@ class Ext3DModel:
         print(self.faces[0])
 
 
-##Création de la fenetre
-root = tkinter.Tk()
-frame = tkinter.Frame(root, width=WIDTH, height=HEIGHT)
-frame.grid_rowconfigure(0, weight=1)
-frame.grid_columnconfigure(0, weight=1)
 
-canvas = tkinter.Canvas(frame, width=WIDTH, height=HEIGHT, bg="#ffffff")
-canvas.grid(row=0, column=0, sticky=tkinter.N+tkinter.S+tkinter.E+tkinter.W)
-root.bind("<Key>", keypress)
-frame.pack()
+if __name__ == '__main__':
+    WIDTH = 1500
+    HEIGHT = 1000
+    SWidth, SHeight = WIDTH//2, HEIGHT//2 #semi width and semi height
+    sensMouv = 1/3 #sensibilite des mouvements
+    sensRot = 1/5 #sensibilite de la rotation
+    colors  = ("#6D8572", "#FAE705", "#343A83", "#00FF00", "#FFB400", "#AD009E")
 
-##Fond d'ecran
-current_file_dir = os.path.dirname(__file__)
-img_path = os.path.join(current_file_dir, "./files/Synthwave-Neon-80s-Background-4K.jpg")
-img = Image.open(img_path)
-x, y = int(HEIGHT*(16/9)), HEIGHT
-img = img.resize((x,y))
-tkimg = ImageTk.PhotoImage(img)
-canvas.create_image(SWidth, SHeight, image=tkimg) #SWidth et SHeight servent a mettre le milieu de l'image au centre du canvas
+    cam = Camera((0,0,-3)) #position initiale de la caméra
 
 
-#Création de la fenetre et des objets
-cam = Camera((0,0,-3))
+    ##Création de la fenetre
+    root = tkinter.Tk()
+    frame = tkinter.Frame(root, width=WIDTH, height=HEIGHT)
+    frame.grid_rowconfigure(0, weight=1)
+    frame.grid_columnconfigure(0, weight=1)
 
-objects = [] 
-############################## 
-# for x in range(-5, 5):
-#     for z in range(-5, 5):
-#         objects.append(FloorPannel((x,0,z),(255,255,255)))
-###############################
-#for x in range(0,20,2):
-#    for z in range(0,20,2):
-#        for y in range(0,-6,-2):
-#            objects.append(Cube((x,y,z),random.choice(colors)))
+    canvas = tkinter.Canvas(frame, width=WIDTH, height=HEIGHT, bg="#ffffff")
+    canvas.grid(row=0, column=0, sticky=tkinter.N+tkinter.S+tkinter.E+tkinter.W)
+    root.bind("<Key>", keypress)
+    frame.pack()
 
-#objects.extend( [Ext3DModel("cube",(0,0,0),((255,0,0))), Ext3DModel("cube",(2,0,0), (0,0,255)), Ext3DModel("cube",(-2,0,0), (0,255,0))] )        
-#objects.append(Ext3DModel("LowPolyPickup",(0,0,0),(255,155,255) ))
-for x in range(0,2):
-    for z in range(0,2):
-        for y in range(0,-2,-1):
-            objects.append( Ext3DModel("cube_big",(x,y,z),(255,155,255)) )
-
-i,frameRate=0,0
-fastCoeff=0
-while True:
-    t0 = time.time()
-
-    cos = (math.cos(cam.rot[0]), math.cos(cam.rot[1]))
-    sin = (math.sin(cam.rot[0]), math.sin(cam.rot[1]))
-    
-    objects.sort(key=lambda x: x.depth, reverse=True) #on ordonne objects selon l'ordre de depth
-    #on affiche pas les objets les plue eloignes
-    
-    #on calcule comment dessiner chaque cube
-    
-    for obj in objects :
-        if obj.show :
-            # TODO = SKIP SOME POLY WHEN OBJECT IS FAR
-            face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), tuple(couleur), int(profondeur) ], [ (x,y),...], ...]
-            for face in obj.faces:
-                
-                depth = 0
-                face_points = [] #contient 3 ou plus sommets a connecter -> (x,y),(x,y),(x,y)
-
-                #obj.faces = ( ((v,v,v,...),(vn,vn,vn,...)), ((v,v,v,...),(vn,vn,vn,...)),..... )
-                #face = ((v,v,v,...),(vn,vn,vn,...))
-                #face[0] = liste des points à connecter, face[1]=list des normales wtf c'est trop chaud
-                for vertid in face[0]:
-                    x,y,z = obj.vertices[vertid-1] 
-                    #le monde bouge par rapport a la camera et non le contraire
-                    x-=cam.pos[0]
-                    y-=cam.pos[1]
-                    z-=cam.pos[2]
-
-                    x,z = x*cos[1]-z*sin[1], z*cos[1]+x*sin[1] #x et z modifies par la rotation autour de y
-                    y,z = y*cos[0]-z*sin[0], z*cos[0]+y*sin[0] #y et z modifies par la rotation autour de x
+    ##Fond d'ecran
+    current_file_dir = os.path.dirname(__file__)
+    img_path = os.path.join(current_file_dir, "./files/Synthwave-Neon-80s-Background-4K.jpg")
+    img = Image.open(img_path)
+    x, y = int(HEIGHT*(16/9)), HEIGHT
+    img = img.resize((x,y))
+    tkimg = ImageTk.PhotoImage(img)
+    canvas.create_image(SWidth, SHeight, image=tkimg) #SWidth et SHeight servent a mettre le milieu de l'image au centre du canvas
 
 
-                    if not z>0:
-                        #si z=0 on a une division par 0 et si z<0 alors l'affichage est hors champ
-                        face_points=None
-                        break
-                    
-                    f=SWidth/z #coefficient de stereoscopie 
-                    X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D ; +SWidth et SHeight car le repere xyz est placé au milieu de l'ecran
-                    if not X<WIDTH+50 or not Y<HEIGHT+50 or not X>-50 or not Y>-50: #should be the following, has been cut for performance not X<WIDTH+SWidth and not Y<HEIGHT+SHeight and not X>-SWidth and not Y>-SHeight
-                        #on affiche pas ce qui est hors champ
-                        face_points=None
-                        break
-                    
-                    face_points.append((X,Y)) 
-                    depth += (x**2)+(y**2)+((z**2)*2) #se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
+    #Création de la fenetre et des objets
 
-                if face_points is not None:
-                    #si il n'y a pas au moins 1 des points qui sort de l'écran
-                    # bad attempt at simple shading
-                    #divider = depth / 300
-                    #color = tuple([ int(clamp((val)-divider, 0, 255)) for val in obj.color  ])
-                    face_points.extend( (obj.color, depth) ) #face_points[4] est dedié à la couleur ; face_point[5] dedié à la profondeur
-                    face_list.append(face_points)
+
+    objects = [] 
+    ############################## 
+    # for x in range(-5, 5):
+    #     for z in range(-5, 5):
+    #         objects.append(FloorPannel((x,0,z),(255,255,255)))
+    ###############################
+    #for x in range(0,20,2):
+    #    for z in range(0,20,2):
+    #        for y in range(0,-6,-2):
+    #            objects.append(Cube((x,y,z),random.choice(colors)))
+
+    #objects.extend( [Ext3DModel("cube",(0,0,0),((255,255,255))), Ext3DModel("cube",(2,0,0), (0,0,255)), Ext3DModel("cube",(-2,0,0), (0,255,0))] )        
+    #objects.append(Ext3DModel("body_highpoly",(0,0,0),(255,155,255) ))
+    for x in range(0,2):
+        for z in range(0,2):
+            for y in range(0,-2,-1):
+                objects.append( Ext3DModel("cube_big",(x,y,z),(255,155,255)) )
+
+    i,frameRate=0,0
+    fastCoeff=0
+    while True:
+        t0 = time.time()
+
+        cos = (math.cos(cam.rot[0]), math.cos(cam.rot[1]))
+        sin = (math.sin(cam.rot[0]), math.sin(cam.rot[1]))
         
-            ##DO THE DRAWING HERE
+        objects.sort(key=lambda x: x.depth, reverse=True) #on ordonne objects selon l'ordre de depth
+        #on affiche pas les objets les plue eloignes
+        
+        #on calcule comment dessiner chaque cube
+        
+        for obj in objects :
+            if obj.show :
+                # TODO = SKIP SOME POLY WHEN OBJECT IS FAR
+                face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), tuple(couleur), int(profondeur) ], [ (x,y),...], ...]
+                for face in obj.faces:
+                    
+                    depth = 0
+                    face_points = [] #contient 3 ou plus sommets a connecter -> (x,y),(x,y),(x,y)
 
-            face_list.sort(key=lambda x: x[-1], reverse=True)
-            #slicing lists is a bad idea
-            for face in face_list: #on ne dessine que les 3 faces maximum visibles simultanément -> pls vrais avec un modele contenant masse faces
-                #TODO = use canvas.move
-                #TODO = remove outline and make shader
-                color = '#%02x%02x%02x' % face[-2]
-                canvas.create_polygon(face[:-2], fill=color, outline="black", tag="faces")
+
+
+                    # x,y,z = (0,0,1) #la caméra regarde toujours vers l'axe z kjfgkgl LOL
+
+                    # x,z = x*cos[1]-z*sin[1], z*cos[1]+x*sin[1] #x et z modifies par la rotation autour de y
+                    # y,z = y*cos[0]-z*sin[0], z*cos[0]+y*sin[0] #y et z modifies par la rotation autour de x
+
+                    nx,ny,nz = 0.,0.,0.
+                    #chaque point de la face a une normal, on fait la moyenne de ces normales
+                    for n in range( len(face[1])-1 ):  # ! les listes commences à 1 dans les fichiers obj !
+                        nx += obj.normals[face[1][n] -1][0] # ! les listes commences à 1 dans les fichiers obj !
+                        ny += obj.normals[face[1][n] -1][1]
+                        nz += obj.normals[face[1][n] -1][2]
+                    #normalsXYZ = [sum(axis)/len(axis) for axis in normalsXYZ ]
+                    nx /= len(face[1])-1
+                    ny /= len(face[1])-1
+                    nz /= len(face[1])-1
+
+                    nx, nz = nx*cos[1]-nz*sin[1], nz*cos[1]+nx*sin[1]
+                    ny, nz = ny*cos[0]-nz*sin[0], nz*cos[0]+ny*sin[0]
+                    #nz = obj.normals[face[1][0]][2]
+
+                    #Si ß est l'angle entre 2 vecteurs u et n, cos(ß)=(u.n)/(||u||*||n||) or ici ||u||=||n||=1
+                    #Donc cos(ß)=(u.n)
+                    #Aussi, u=lightsource=(0,0,1) ; donc u.n = uz*nz
+                    #Et la lumimosité de la face doit etre de (1-|cos(ß)|)*100%
+                    lightsource = (0,0,1) #la lumiere va exclusivement vers l'avant et vient d'une source fixe / ce vecteur doit etre normalise pour avoir une longueur de 1
+                    lightReceived = 1 - abs(nz*lightsource[2])
 
 
 
-    ##tLOL = time.time()
-    ######################################################################
-    #on remet l'image à 0
-    root.update()
-    canvas.delete("faces")
-    ###################################################################### super lent, tank les fps
-    ##print(( time.time()-tLOL ), "canvas delete")
+                    #TODO, masquer les faces par rapport `a leur normale et un vecteur camera
+                    #if lightReceived== 0:
+                    #    continue
+                    #if lightReceived<0 :
+                    #    continue
+                        #on affiche pas la face, elle est dans la mauvaise direction
+                    faceColor = tuple([ int( col*lightReceived ) for col in obj.color])
 
-    frameRate += time.time()-t0
-    i+=1
-    if i > 50 :
-        print(1/((frameRate/i)+1e-10),"fps")
-        i=0
-        frameRate=0
+                    #obj.faces = ( ((v,v,v,...),(vn,vn,vn,...)), ((v,v,v,...),(vn,vn,vn,...)),..... )
+                    #face = ((v,v,v,...),(vn,vn,vn,...))
+                    #face[0] =  (v,v,v,...) = liste des points à connecter, face[1]= (vn,vn,vn,...) = liste des normales
+                    for vertid in face[0]:
+                        #le monde bouge par rapport a la camera et non le contraire
+
+                        x,y,z = obj.vertices[vertid-1][0] - cam.pos[0], obj.vertices[vertid-1][1]-cam.pos[1], obj.vertices[vertid-1][2]-cam.pos[2]
+
+                        x,z = x*cos[1]-z*sin[1], z*cos[1]+x*sin[1] #x et z modifies par la rotation autour de y
+                        y,z = y*cos[0]-z*sin[0], z*cos[0]+y*sin[0] #y et z modifies par la rotation autour de x
+
+
+                        if not z>0:
+                            #si z=0 on a une division par 0 et si z<0 alors l'affichage est hors champ
+                            face_points=None
+                            break
+                        
+                        f=SWidth/z #coefficient de stereoscopie 
+                        X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D ; +SWidth et SHeight car le repere xyz est placé au milieu de l'ecran
+                        if not X<WIDTH+50 or not Y<HEIGHT+50 or not X>-50 or not Y>-50: #should be the following, has been cut for performance not X<WIDTH+SWidth and not Y<HEIGHT+SHeight and not X>-SWidth and not Y>-SHeight
+                            #on affiche pas ce qui est hors champ
+                            face_points=None
+                            break
+                        
+                        face_points.append((X,Y)) 
+                        depth += (x**2)+(y**2)+((z**2)*2) #se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
+
+                    if face_points is not None:
+                        #si il n'y a pas au moins 1 des points qui sort de l'écran
+                        # bad attempt at simple shading
+                        #divider = depth / 300
+                        #color = tuple([ int(clamp((val)-divider, 0, 255)) for val in obj.color  ])
+                        face_points.extend( (faceColor, depth) ) #face_points[4] est dedié à la couleur ; face_point[5] dedié à la profondeur
+                        face_list.append(face_points)
+            
+                ##DO THE DRAWING HERE
+
+                face_list.sort(key=lambda x: x[-1], reverse=True)
+                #slicing lists is a bad idea
+                for face in face_list: #on ne dessine que les 3 faces maximum visibles simultanément -> pls vrais avec un modele contenant masse faces
+                    #TODO = use canvas.move
+                    #TODO = remove outline and make shader
+                    color = '#%02x%02x%02x' % face[-2]
+                    canvas.create_polygon(face[:-2], fill=color, tag="faces")
+
+
+
+        ##tLOL = time.time()
+        ######################################################################
+        #on remet l'image à 0
+        root.update()
+        canvas.delete("faces")
+        ###################################################################### super lent, tank les fps
+        ##print(( time.time()-tLOL ), "canvas delete")
+
+        frameRate += time.time()-t0
+        i+=1
+        if i > 50 :
+            print(1/((frameRate/i)+1e-10),"fps")
+            i=0
+            frameRate=0
