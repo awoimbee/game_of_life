@@ -3,8 +3,9 @@ from PIL import ImageTk, Image
 import math, random
 import time
 import os
+import _thread
 
-WIDTH = 1000
+WIDTH = 1500
 HEIGHT = 1000
 SWidth, SHeight = WIDTH//2, HEIGHT//2 #semi width and semi height
 sensMouv = 1/5 #sensibilite des mouvements
@@ -63,7 +64,7 @@ def keypress(event):
     #on calcule dans quel ordre dessiner chaque cube - *on retire ceux qui sont hors champ*
     global objects
     for obj in objects :
-        obj.show = False
+        obj.show = True ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! DEBUG
         x,y,z = obj.pos     #tout cela est calculé à partir du centre de chaque cube
         x-=cam.pos[0]
         y-=cam.pos[1]
@@ -83,36 +84,84 @@ def keypress(event):
     ############################################################# super fast
 
 
+def clamp (val, minval, maxval):
+    "retourne val, compris entre minval et maxval"
+    if val < minval: return minval
+    if val > maxval: return maxval
+    return val
 
-class Cube:
-    #sommets du cube quand il est positionné sur l'origine des reperes x,y,z puis ses arretes, puis ses faces
-    vertices = (-1,1,-1),(1,1,-1),(1,-1,-1),(-1,-1,-1), (-1,1,1),(1,1,1),(1,-1,1),(-1,-1,1)
-    #edges = (0,1),(1,2),(2,3),(3,0), (0,4), (1,5),(2,6),(3,7), (4,5),(5,6),(6,7),(7,4) #ne sert a rien
-    faces = (4,5,6,7),(0,3,7,4),(1,2,6,5),(3,2,6,7),(0,1,5,4),(0,1,2,3)
-    depth=0
-    show=False
 
-    def __init__(self, position=(0,0,0), color="white"):
-        x,y,z = position
-        self.pos = position
-        #on calcule les coordonnees de chaque arrete du cube en fonction de ses dimensions et sa position dans l'espace
-        # X,Y,Z = un point de l'objet
-        self.vertices = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.vertices]
-        #jsp pas pq faut diviser par 2 mais ça fonctionne mieux
-        self.color=color
+# class Cube: #NEEDS UPDATING
+#     #sommets du cube quand il est positionné sur l'origine des reperes x,y,z puis ses arretes, puis ses faces
+#     vertices = (-1,1,-1),(1,1,-1),(1,-1,-1),(-1,-1,-1), (-1,1,1),(1,1,1),(1,-1,1),(-1,-1,1)
+#     #edges = (0,1),(1,2),(2,3),(3,0), (0,4), (1,5),(2,6),(3,7), (4,5),(5,6),(6,7),(7,4) #ne sert a rien
+#     faces = (4,5,6),(4,7,6), (0,3,7),(0,4,7), (1,2,6),(1,5,6), (3,2,6),(3,7,6), (0,1,4),(5,4,1), (0,1,2),(0,3,2)
+#     #squarefaces = (4,5,6,7),(0,3,7,4),(1,2,6,5),(3,2,6,7),(0,1,5,4),(0,1,2,3)
+#     depth=0
+#     show=True
+
+#     def __init__(self, position=(0,0,0), color="white"):
+#         x,y,z = position
+#         self.pos = position
+#         #on calcule les coordonnees de chaque arrete du cube en fonction de ses dimensions et sa position dans l'espace
+#         # X,Y,Z = un point de l'objet
+#         self.vertices = [(x+X/2, -y-Y/2, -z-Z/2) for X,Y,Z in self.vertices]
+#         #jsp pas pq faut diviser par 2 mais ça fonctionne mieux
+#         self.color=color
 
 class FloorPannel:
     vertices = (1,1,1),(1,1,-1),(-1,1,-1),(-1,1,1)
     #edges = (0,1),(1,2),(2,3),(3,0)
-    faces = ((0,1,2,3), ) #un obj a besoin de 2 faces minimum
+    faces = ((0,1,2), (0,3,2)) #un obj a besoin de 2 faces minimum
     depth=0
-    show=False
+    show=True
     def __init__(self, position=(0,0,0), color="white"):
         x,y,z = position
         self.pos = position
         self.vertices = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.vertices]
         self.color=color
         
+
+class Ext3DModel:
+    vertices = []
+    faces = []  
+    depth=0
+    show=True
+    def __init__(self, fileName, position=(0,0,0), color="white", fileOindex=0):
+        '''Créé un objet à partir d\'un fichier .obj.'''
+
+        # https://fr.wikipedia.org/wiki/Objet_3D_(format_de_fichier)
+        # o = objet        v = vertices           f = faces           les vt, vn et autres ne sont pas lus
+        F = open(".\\files\\"+ fileName +".obj","r")
+        oNumber=-1
+        for line in F:
+            if line[0] == "o" and line[1] == " " and oNumber<fileOindex: 
+                oNumber+=1
+            elif line[0] == "v" and line[1] == " ":
+                arr=[]
+                ass = line[1:].split()
+                #print(ass)
+                for fuck in ass:
+                    arr.append(float(fuck))
+                self.vertices.append(tuple( arr ))
+            elif line[0] == "f" and line[1] == " ":
+                fuck = line[1:].split()
+                values=[]
+                for die in fuck:
+                    lol = die.split("/")
+                    values.append( int(lol[0]) )
+                self.faces.append( tuple(values) )
+            elif line[0] == "o" and line[1] == " ":
+                #TODO = create another object
+                print("fuck off")
+                self.vertices=[]
+                self.faces=[]
+                break
+        x,y,z = position
+        self.pos = position
+        self.vertices = [(x+X/2, -y-Y/2, -z-Z/2) for X,Y,Z in self.vertices]
+        self.color=color
+
 
 ##Création de la fenetre
 root = tkinter.Tk()
@@ -136,22 +185,27 @@ canvas.create_image(SWidth, SHeight, image=tkimg) #SWidth et SHeight servent a m
 
 
 #Création de la fenetre et des objets
-cam = Camera((0,0,-6))
+cam = Camera((0,0,-3))
 
 objects = [] 
 ############################## 
-for x in range(-5, 5):
-    for z in range(-5, 5):
-        objects.append(FloorPannel((x,0,z),"white"))
+# for x in range(-5, 5):
+#     for z in range(-5, 5):
+#         objects.append(FloorPannel((x,0,z),(255,255,255)))
 ###############################
-##objects = []  
-for x in range(0,20,2):
-    for z in range(0,20,2):
-        for y in range(0,-6,-2):
-            objects.append(Cube((x,y,z),random.choice(colors)))
+#for x in range(0,20,2):
+#    for z in range(0,20,2):
+#        for y in range(0,-6,-2):
+#            objects.append(Cube((x,y,z),random.choice(colors)))
 
-##objects.extend( [Cube((0,0,0),"red"),Cube((2,0,0), "blue"), Cube((-2,0,0), "yellow")])        
+#objects.extend( [Ext3DModel("cube",(0,0,0),((255,0,0))), Ext3DModel("cube",(2,0,0), (0,0,255)), Ext3DModel("cube",(-2,0,0), (0,255,0))] )        
+#objects.append(Ext3DModel("body_highpoly",(0,0,0),(255,0,0) ))
+for x in range(0,2):
+    for z in range(0,2):
+        for y in range(0,-2,-1):
+            objects.append( Ext3DModel("cube_big",(x,y,z),(255,155,255)) )
 
+crop = int(len(objects)/10) #le nombre d'objets qui ne seront pas affiches, meme si ils sont a l'ecran #optimisation
 i,frameRate=0,0
 while True:
     t0 = time.time()
@@ -161,16 +215,17 @@ while True:
     
     objects.sort(key=lambda x: x.depth, reverse=True) #on ordonne objects selon l'ordre de depth
     #on affiche pas les objets les plue eloignes
-    crop = int(len(objects)/10)
+    
     #on calcule comment dessiner chaque cube
     for obj in objects[crop:] :
         if obj.show :
+            # TODO = SKID SOME POLY WHEN OBJECT IS FAR
             face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), tuple(couleur), int(profondeur) ], [ (x,y),...], ...]
             for face in obj.faces:
                 
                 depth = 0
-                face_points = [] #contient 4 sommets a connecter -> (x,y),(x,y),(x,y),(x,y)
-                for x,y,z in (obj.vertices[face[0]], obj.vertices[face[1]], obj.vertices[face[2]], obj.vertices[face[3]]):
+                face_points = [] #contient 3 sommets a connecter -> (x,y),(x,y),(x,y)
+                for x,y,z in (obj.vertices[face[0]-1], obj.vertices[face[1]-1], obj.vertices[face[2]-1]): #, obj.vertices[face[3]-1]
                     #le monde bouge par rapport a la camera et non le contraire
                     x-=cam.pos[0]
                     y-=cam.pos[1]
@@ -179,33 +234,52 @@ while True:
                     x,z = x*cos[1]-z*sin[1], z*cos[1]+x*sin[1] #x et z modifies par la rotation autour de y
                     y,z = y*cos[0]-z*sin[0], z*cos[0]+y*sin[0] #y et z modifies par la rotation autour de x
 
-                    if z>0:
-                        f=SWidth/z #coefficient de stereoscopie 
-                        face_points.append((x*f+SWidth, y*f+SHeight)) #position en pixels des sommets sur l'image 2D
-                        depth += (x**2)+(y**2)+(z**2) #se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
-                if len(face_points) > 1:
+
+                    
+                    if not z>0:
+                        #si z=0 on a une division par 0 et si z<0 alors l'affichage est hors champ
+                        face_points=None
+                        break
+                    
+                    f=SWidth/z #coefficient de stereoscopie 
+                    X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
+                    if not X<WIDTH+10 and not Y<HEIGHT+10 and not X>-10 and not Y>-10: #should be the following, has been cut for performance not X<WIDTH+SWidth and not Y<HEIGHT+SHeight and not X>-SWidth and not Y>-SHeight
+                        #on affiche pas ce qui est hors champ
+                        face_points=None
+                        break
+                    
+                    face_points.append((X,Y)) 
+                    depth += (x**2)+(y**2)+((z**2)*2) #se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
+
+                if face_points is not None:
                     #si il y a au moins 2 points à connecter
-                    face_points.extend( (obj.color, depth) )
-                    #face_points[4] est dedié à la couleur, cela permet une meilleure optimisation (20fps au lieu de 10!)
-                    #face_point[5] dedié à la profondeur
+                    divider = depth / 300
+                    color = tuple([ int(clamp((val)-divider, 0, 255)) for val in obj.color  ])
+                    face_points.extend( (color, depth) )
+                    #face_points[4] est dedié à la couleur, cela permet une meilleure optimisation (20fps au lieu de 10!) ; face_point[5] dedié à la profondeur
                     face_list.append(face_points)
         
             ##DO THE DRAWING HERE
             face_list.sort(key=lambda x: x[-1], reverse=True)
-            for face in face_list[-3:]: #on ne dessine que les 3 faces maximum visibles simultanément
-                canvas.create_polygon(face[:-2], fill=face[-2], outline="black", tag="face")
+            for face in face_list: #on ne dessine que les 3 faces maximum visibles simultanément -> pls vrais avec un modele contenant masse faces
+                #TODO = use canvas.move
+                #TODO = remove outline and make shader
+                color = '#%02x%02x%02x' % face[-2]
+                canvas.create_polygon(face[:-2], fill=color, tag="faces", outline="black")
 
 
-    root.update()
-    #on remet l'image à 0
 
     ##tLOL = time.time()
-    canvas.delete("face")
+    ######################################################################
+    #on remet l'image à 0
+    root.update()
+    canvas.delete("faces")
+    ###################################################################### super lent, tank les fps
     ##print(( time.time()-tLOL ), "canvas delete")
 
     frameRate += time.time()-t0
     i+=1
     if i > 50 :
-        print(1/((frameRate/i)+1e-10),"1/fps")
+        print(1/((frameRate/i)+1e-10),"fps")
         i=0
         frameRate=0
