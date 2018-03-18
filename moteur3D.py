@@ -18,8 +18,10 @@ class Camera:
         self.rot = list(rot) #rot=rotation
 
 def keypress(event):
+    """Calcule le déplacement et l'ordre d'affichage des objets en fonction de l'input."""
     #deplacement
-    x,y = math.sin(cam.rot[1]), math.cos(cam.rot[1])
+    global cos, sin
+    x,y = sin[1], cos[1]
     if event.keysym == 'd':
         cam.pos[0]+=y
         cam.pos[2]-=x
@@ -59,7 +61,7 @@ def keypress(event):
     # REVOVE NOT SHOWED OBJECTS
     #mettre ça ici permet d'améliorer le framerate
     #on calcule dans quel ordre dessiner chaque cube - *on retire ceux qui sont hors champ*
-    global objects, cos, sin
+    global objects
     for obj in objects :
         obj.show = False
         x,y,z = obj.pos     #tout cela est calculé à partir du centre de chaque cube
@@ -86,29 +88,32 @@ def keypress(event):
 
 #TODO = CREATE CLAS OBJECT
 class Cube:
-    #sommets du cube positionné sur l'origine des reperes x,y,z puis ses arretes du cube, puis ses faces
-    verts = (-1,1,-1),(1,1,-1),(1,-1,-1),(-1,-1,-1), (-1,1,1),(1,1,1),(1,-1,1),(-1,-1,1)
-    edges = (0,1),(1,2),(2,3),(3,0), (0,4), (1,5),(2,6),(3,7), (4,5),(5,6),(6,7),(7,4) #ne sert a rien
+    #sommets du cube quand il est positionné sur l'origine des reperes x,y,z puis ses arretes, puis ses faces
+    vertices = (-1,1,-1),(1,1,-1),(1,-1,-1),(-1,-1,-1), (-1,1,1),(1,1,1),(1,-1,1),(-1,-1,1)
+    #edges = (0,1),(1,2),(2,3),(3,0), (0,4), (1,5),(2,6),(3,7), (4,5),(5,6),(6,7),(7,4) #ne sert a rien
     faces = (4,5,6,7),(0,3,7,4),(1,2,6,5),(3,2,6,7),(0,1,5,4),(0,1,2,3)
+    depth=0
+    show=False
 
     def __init__(self, position=(0,0,0), color="white"):
         x,y,z = position
-        self.pos= position
-        self.depth=0
-        self.show=False
-        #on calcule les coordonnees de chaque arrete du cube en fonction de ses dimensions originales et sa position dans l'espace
-        # X Y Z = position autour de l'origine
-        self.vertices = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.verts]
+        self.pos = position
+        #on calcule les coordonnees de chaque arrete du cube en fonction de ses dimensions et sa position dans l'espace
+        # X,Y,Z = un point de l'objet
+        self.vertices = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.vertices]
         #jsp pas pq faut diviser par 2 mais ça fonctionne mieux
         self.color=color
 
 class FloorPannel:
-    verts = (1,1,1),(1,1,-1),(-1,1,-1),(-1,1,1)
-    edges = (0,1),(1,2),(2,3),(3,0)
+    vertices = (1,1,1),(1,1,-1),(-1,1,-1),(-1,1,1)
+    #edges = (0,1),(1,2),(2,3),(3,0)
     faces = ((0,1,2,3), ) #un obj a besoin de 2 faces minimum
+    depth=0
+    show=False
     def __init__(self, position=(0,0,0), color="white"):
         x,y,z = position
-        self.vertices = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.verts]
+        self.pos = position
+        self.vertices = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.vertices]
         self.color=color
         
 
@@ -126,15 +131,20 @@ frame.pack()
 
 
 
+#Création de la fenetre et des objets
 cam = Camera((0,0,-6))
-objects = [Cube((0,0,0),"red"),Cube((2,0,0), "blue"), Cube((-2,0,0), "yellow")]
+
 
 ##objects = []  
-##for x in range(0,100,2):
-##    for z in range(0,100,2):
-##        for y in range(0,100,2):
+##for x in range(0,20,2):
+##    for z in range(0,20,2):
+##        for y in range(0,20,2):
 ##            objects.append(Cube((x,y,z),random.choice(colors)))
-
+objects = []  
+for x in range(-5, 5):
+    for z in range(-5, 5):
+        objects.append(FloorPannel((x,0,z),"white"))
+objects.extend( [Cube((0,0,0),"red"),Cube((2,0,0), "blue"), Cube((-2,0,0), "yellow")])        
 
 PILimg = Image.new('RGB', (WIDTH,HEIGHT), (0,0,0)) #chaque frame sera PILimg
 draw = ImageDraw.Draw(PILimg)
@@ -147,10 +157,10 @@ while True:
     sin = (math.sin(cam.rot[0]), math.sin(cam.rot[1]))
     
 
-    
-    crop = len(objects)/10
+    #on affiche pas les objets les plue eloignes
+    crop = int(len(objects)/10)
     #on calcule comment dessiner chaque cube
-    for obj in objects[int(crop):] :
+    for obj in objects[crop:] :
         if obj.show :
             face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), tuple(couleur), int(profondeur) ], [ (x,y),...], ...]
             for face in obj.faces:
@@ -173,29 +183,28 @@ while True:
                 if len(face_points) > 1:
                     #si il y a au moins 2 points à connecter
                     face_points.extend( (obj.color, depth) )
-                    #face_points.append(obj.color) #face_points[4] est dedié à la couleur, cela permet une meilleure optimisation (20fps au lieu de 10!)
-                    #face_points.append(depth) #face_point[5] dedié à la profondeur
+                    #face_points[4] est dedié à la couleur, cela permet une meilleure optimisation (20fps au lieu de 10!)
+                    #face_point[5] dedié à la profondeur
                     face_list.append(face_points)
         
             ##DO THE DRAWING HERE
             face_list.sort(key=lambda x: x[-1], reverse=True)
-            for face in face_list[-3:]: #on ne dessine que les 3 faces visibles simultanément au maximum
-                del face[-1]
-                color = face.pop()
-                draw.polygon(face, fill=color, outline="black")
+            for face in face_list[-3:]: #on ne dessine que les 3 faces maximum visibles simultanément
+                #color = face[-2]
+                #del face[-2:]
+                draw.polygon(face[:-2], fill=face[-2], outline="black")
     #print("computed", time.time()-t0)     
 #tLOL = time.time()
     #print(( time.time()-tLOL ), "tkinter")
     
-
+###################################################
     #afficher image
     img = ImageTk.PhotoImage(PILimg)
     canvas.create_image(SWidth, SHeight, image=img) #SWidth et SHeight servent a mettre le milieu de l'image au centre du canvas
     root.update()
-    
+##################################################  lent, tank les fps
     #on remet l'image (PILimg) à 0
     draw.polygon(((0,0),(0,WIDTH),(HEIGHT,WIDTH),(HEIGHT,0)), fill="black") 
-
     #print("drawn", time.time()-t0)
     
     frameRate += 1/(time.time()-t0)
