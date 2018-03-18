@@ -1,7 +1,6 @@
 import tkinter
 import PIL
 from PIL import ImageTk, Image, ImageDraw
-import time
 import math, random
 
 WIDTH = 1000
@@ -60,7 +59,20 @@ def keypress(event):
         cam.rot[0]-=sensRot
     elif event.keysym == 'Down':
         cam.rot[0]+=sensRot
-    
+
+
+class Cube:
+    #sommets du cube positionné sur l'origine des reperes x,y,z puis ses arretes du cube, puis ses faces
+    verts = (-1,1,-1),(1,1,-1),(1,-1,-1),(-1,-1,-1), (-1,1,1),(1,1,1),(1,-1,1),(-1,-1,1)
+    edges = (0,1),(1,2),(2,3),(3,0), (0,4), (1,5),(2,6),(3,7), (4,5),(5,6),(6,7),(7,4) #ne sert a rien
+    faces = (4,5,6,7),(0,3,7,4),(1,2,6,5),(3,2,6,7),(0,1,5,4),(0,1,2,3)
+
+    def __init__(self, position=(0,0,0)):
+        x,y,z = position
+        #on calcule les coordonnees de chaque arrete du cube en fonction de ses dimensions originales et sa position dans l'espace
+        # X Y Z = position autour de l'origine
+        self.vertices = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.verts]
+        #jsp pas pq faut diviser par 2 mais ça fonctionne mieux
     
 def clamp (val, minval, maxval):
     "retourne val, compris entre minval et maxval"
@@ -82,13 +94,8 @@ frame.pack()
 
 
 
-#sommets du cube selon le repere (x,y,z) puis les arretes du cube, puis ses faces
-vertices = (-1,1,-1),(1,1,-1),(1,-1,-1),(-1,-1,-1), (-1,1,1),(1,1,1),(1,-1,1),(-1,-1,1)
-edges = (0,1),(1,2),(2,3),(3,0), (0,4), (1,5),(2,6),(3,7), (4,5),(5,6),(6,7),(7,4)
-faces = (4,5,6,7),(0,3,7,4),(1,2,6,5),(3,2,6,7),(0,1,5,4),(0,1,2,3)
-
-cam=Camera((0,0,-6))
-
+cam = Camera((0,0,-6))
+cubes = [Cube((0,0,0)),Cube((2,0,0)), Cube((-2,0,0))]
 
 while True:
     # chaque frame sera PILimg
@@ -98,35 +105,39 @@ while True:
     #### Création d'une liste de faces et leur profondeur
     face_list=[] #contient : [points1, points2, ...] => [ [ [x,y],[x,y],[x,y],[x,y] ], [ [x,y],...], ...]
     depth_list=[]
-    for face in faces:
-        depth = 0
-        face_points = [] #contient 4 sommets a connecter
-        for x,y,z in (vertices[face[0]], vertices[face[1]], vertices[face[2]], vertices[face[3]]):
-            #le monde bouge par rapport a la camera et non le contraire
-            x-=cam.pos[0]
-            y-=cam.pos[1]
-            z-=cam.pos[2]
 
-            x,z = rotate((x,z),cam.rot[1]) #x et z modifies par la rotation autour de y
-            y,z = rotate((y,z),cam.rot[0]) #y et z modifies par la rotation autour de x
-            
-            f=SWidth/(z+0.0001) #un coefficient de stereoscopie, z pas egal a 0 donc pas de division par 0    
+    #on calcule comment dessiner chaque cube
+    for cube in cubes :
+        for face in cube.faces:
+            depth = 0
+            face_points = [] #contient 4 sommets a connecter
+            for x,y,z in (cube.vertices[face[0]], cube.vertices[face[1]], cube.vertices[face[2]], cube.vertices[face[3]]):
+                #le monde bouge par rapport a la camera et non le contraire
+                x-=cam.pos[0]
+                y-=cam.pos[1]
+                z-=cam.pos[2]
 
-            x,y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
+                x,z = rotate((x,z),cam.rot[1]) #x et z modifies par la rotation autour de y
+                y,z = rotate((y,z),cam.rot[0]) #y et z modifies par la rotation autour de x
+			
+                f=SWidth/(z+0.0001) #un coefficient de stereoscopie, z pas egal a 0 donc pas de division par 0    
 
-            #x et y doivent cerrespondre a des pixels du canvas ! (on evite le index out of range)
-            #TODO changer ça pour un truc qui fonctionne vraiment
-            x = clamp(x,0,WIDTH)
-            y = clamp(y,0,HEIGHT)
+                x,y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
 
-            face_points.append([x,y]) 
-            depth += z**4 #on exacèrbe la profondeur, TODO ne pa la calculer que a partir de z
-        
-        face_points.append([colors[faces.index(face)]]) #points[4][0] est dedié à la couleur
-        depth_list.append(depth)
-        face_list.append(face_points)
+                #x et y doivent cerrespondre a des pixels du canvas ! (on evite le index out of range)
+                #TODO changer ça pour un truc qui fonctionne vraiment
+                x = clamp(x,0,WIDTH)
+                y = clamp(y,0,HEIGHT)
 
-    #dessiner faces
+                face_points.append([x,y]) 
+                depth += z**4 #on exacèrbe la profondeur, TODO ne pa la calculer que a partir de z
+		
+            face_points.append([colors[cube.faces.index(face)]]) #face_points[4][0] est dedié à la couleur
+            depth_list.append(depth)
+            face_list.append(face_points)
+
+
+    #dessiner faces, le final
     face_list=[x for _,x in sorted(zip(depth_list,face_list), reverse=True)] #on ordonne face_list selon l'ordre de depth_list
     draw = ImageDraw.Draw(PILimg)
     for face in face_list :
