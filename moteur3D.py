@@ -1,15 +1,16 @@
-import tkinter
+﻿import tkinter
 import PIL
 from PIL import ImageTk, Image, ImageDraw
 import math, random
 from threading import Thread
+import time
 
 WIDTH = 1000
 HEIGHT = 1000
 SWidth, SHeight = WIDTH//2, HEIGHT//2 #semi width and semi height
 sensMouv = 0.25 #sensibilite des mouvements
 sensRot = 1/7 #sensibilite de la rotation
-colors  = ["red","green","blue","orange","purple","pink","yellow"]
+colors  = [(207,255,242),(86,139,165),(199,118,78),(143,220,53),(255,88,30),(255,246,143),(255,192,203),(209,224,235)]
 
 
 class Camera:
@@ -18,15 +19,14 @@ class Camera:
         self.rot = list(rot) #rot=rotation
 
 def rotate(pos, rotation):
-    a,z=pos #a represente x ou y en fonction des cas 
+    #pos[0] represente x ou y en fonction des cas, pos[1]=z
     sin=math.sin(rotation)
     cos=math.cos(rotation)
-    return a*cos-z*sin, z*cos+a*sin
+    return pos[0]*cos-pos[1]*sin, pos[1]*cos+pos[0]*sin
 
 def keypress(event):
     #deplacement
     x,y = math.sin(cam.rot[1]), math.cos(cam.rot[1])
-    
     if event.keysym == 'd':
         cam.pos[0]+=y
         cam.pos[2]-=x
@@ -79,17 +79,12 @@ class Cube:
 class FloorPannel:
     verts = (1,1,1),(1,1,-1),(-1,1,-1),(-1,1,1)
     edges = (0,1),(1,2),(2,3),(3,0)
-    faces = (0,1,2,3), (0,0,0,0) #un obj a besoin de 2 faces minimum
+    faces = ((0,1,2,3), ) #un obj a besoin de 2 faces minimum
     def __init__(self, position=(0,0,0), color="white"):
         x,y,z = position
         self.vertices = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.verts]
         self.color=color
-    
-def clamp (val, minval, maxval):
-    "retourne val, compris entre minval et maxval"
-    if val < minval: return minval
-    if val > maxval: return maxval
-    return val
+        
 
 ##Création de la fenetre
 root = tkinter.Tk()
@@ -106,22 +101,23 @@ frame.pack()
 
 
 cam = Camera((0,0,-6))
-#objects = [Cube((0,0,0),"red"),Cube((2,0,0), "blue"), Cube((-2,0,0), "yellow")]
+objects = [Cube((0,0,0),"red"),Cube((2,0,0), "blue"), Cube((-2,0,0), "yellow")]
 
-objects = []  
-for x in range(20):
-    for z in range(20):
-        objects.append(Cube((x,0,z),"white"))
+##objects = []  
+##for x in range(0,20,2):
+##    for z in range(0,20,2):
+##        for y in range(0,20,2):
+##            objects.append(Cube((x,y,z),random.choice(colors)))
 
+
+PILimg = Image.new('RGB', (WIDTH,HEIGHT), (0,0,0)) #chaque frame sera PILimg
+draw = ImageDraw.Draw(PILimg)
+i,frameRate=0,0
 while True:
-    # chaque frame sera PILimg
-    PILimg = Image.new('RGB', (WIDTH,HEIGHT), (0,0,0))
-    
-
+    t0 = time.time()
+    i+=1
     #### Création d'une liste de faces et leur profondeur
-    face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y) ], [ (x,y),...], ...]
-    depth_list=[]
-    face_color=[]
+    face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), tuple(couleur), int(profondeur) ], [ (x,y),...], ...]
 
     #on calcule comment dessiner chaque cube
     for obj in objects :
@@ -136,43 +132,44 @@ while True:
 
                 x,z = rotate((x,z),cam.rot[1]) #x et z modifies par la rotation autour de y
                 y,z = rotate((y,z),cam.rot[0]) #y et z modifies par la rotation autour de x
-			
-                f=SWidth/(z+0.0001) #un coefficient de stereoscopie, z pas egal a 0 donc pas de division par 0    
 
-                x,y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
+                if z>0:
+                    #si z=0 on a une division par 0 et si z<0 alors l'affichage est hors champ
+                    f=SWidth/z #coefficient de stereoscopie 
+                    X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
 
-                #x et y doivent cerrespondre a des pixels du canvas ! (on evite le index out of range)
-                #TODO changer ça pour un truc qui fonctionne vraiment
-                ##x = clamp(x,0,WIDTH)
-                ##y = clamp(y,0,HEIGHT)
+                    if X<WIDTH+SWidth and Y<HEIGHT+SHeight and X>-SWidth and Y>-SHeight:
+                        #on affiche pas ce qui est hors champ
+                        face_points.append((X,Y)) 
+                        depth += (x**2)+(y**2)+(z**2) #se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
 
-                if z<0:
-                    depth -= z**4
-                else:
-                    face_points.append((x,y)) 
-                    depth += z*(1000000)+x+y #TODO un meilleur calcul
-                    #le profondeur ne depend pas que de z pour pas melanger les faces à Z égal
-
-            #if set(tuple(face_points)) != set(i for i in face_list):
-            face_color.append( obj.color ) #face_points[4][0] est dedié à la couleur
-            depth_list.append(depth)
-            face_list.append(tuple(face_points))
-
+            if len(face_points) > 1:
+                #si il y a au moins 2 points à connecter
+                face_points.append( obj.color ) #face_points[4] est dedié à la couleur, cela permet une meilleure optimisation (20fps au lieu de 10!)
+                face_points.append(depth) #face_point[5] dedié à la profondeur
+                face_list.append(face_points)
+        ##NEDD TO DO THE DRAWING HERE
 
     #dessiner faces, le final
-    face_list=[x for _,x in sorted(zip(depth_list,face_list), reverse=True)] #on ordonne face_list selon l'ordre de depth_list
-    face_color=[x for _,x in sorted(zip(depth_list,face_color), reverse=True)]
-    draw = ImageDraw.Draw(PILimg)
+    #on remet l'image à 0
+    draw.polygon(((0,0),(0,WIDTH),(HEIGHT,WIDTH),(HEIGHT,0)), fill="black")
+    #on ordonne face_list selon l'ordre de depth_list (maintenant intégré à face_list, en derniere position ="-1"), pour avoir une profondeur de champ
+    face_list.sort(key=lambda x: x[-1], reverse=True)
+    
     for face in face_list :
-        color=face_color[face_list.index(face)]
-        if len(face) > 1 :
-            #si il y a au moins un trai à dessiner
-            draw.polygon(face, fill=color, outline="black")
-    del draw
+        del face[-1]
+        color= face.pop() #on recupere la couleur et la retire de face qui servira a definir la forme de la face
+        #print("putain", face)
+        draw.polygon(face, fill=color, outline="black")
 
     #afficher image
     img = ImageTk.PhotoImage(PILimg)
-    oneFrame = canvas.create_image(SWidth, SHeight, image=img) #SWidth et SHeight servent a mettre le milieu de l'image au centre du canvas
+    canvas.create_image(SWidth, SHeight, image=img) #SWidth et SHeight servent a mettre le milieu de l'image au centre du canvas
 
+    #on met à jour l'affichage
     root.update()
-    canvas.delete(oneFrame)
+    frameRate += 1/(time.time()-t0)
+    if i > 50 :
+        print(frameRate/i,"fps")
+        i=0
+        frameRate=0
