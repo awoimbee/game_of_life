@@ -1,16 +1,16 @@
 ﻿import tkinter
-import PIL
-from PIL import ImageTk, Image, ImageDraw
+from PIL import ImageTk, Image
 import math, random
-from threading import Thread
 import time
+import os
 
 WIDTH = 1000
 HEIGHT = 1000
 SWidth, SHeight = WIDTH//2, HEIGHT//2 #semi width and semi height
-sensMouv = 0.25 #sensibilite des mouvements
-sensRot = 1/7 #sensibilite de la rotation
-colors  = [(207,255,242),(86,139,165),(199,118,78),(143,220,53),(255,88,30),(255,246,143),(255,192,203),(209,224,235)]
+sensMouv = 1/5 #sensibilite des mouvements
+sensRot = 1/10 #sensibilite de la rotation
+
+colors  = ("#6D8572", "#FAE705", "#343A83", "#00FF00", "#FFB400", "#AD009E")
 
 class Camera:
     def __init__(self, pos=(0,0,0), rot=(0,0)):
@@ -21,7 +21,7 @@ def keypress(event):
     """Calcule le déplacement et l'ordre d'affichage des objets en fonction de l'input."""
     #deplacement
     global cos, sin
-    x,y = sin[1], cos[1]
+    x,y = sin[1]*sensMouv, cos[1]*sensMouv
     if event.keysym == 'd':
         cam.pos[0]+=y
         cam.pos[2]-=x
@@ -80,13 +80,10 @@ def keypress(event):
             if X<WIDTH+SWidth and Y<HEIGHT+SHeight and X>-SWidth and Y>-SHeight: #peu d'impact sur framerate
                 obj.depth = (x**2)+(y**2)+(z**2)
                 obj.show = True
-
-    objects.sort(key=lambda x: x.depth, reverse=True) #on ordonne objects selon l'ordre de depth
     ############################################################# super fast
 
 
 
-#TODO = CREATE CLAS OBJECT
 class Cube:
     #sommets du cube quand il est positionné sur l'origine des reperes x,y,z puis ses arretes, puis ses faces
     vertices = (-1,1,-1),(1,1,-1),(1,-1,-1),(-1,-1,-1), (-1,1,1),(1,1,1),(1,-1,1),(-1,-1,1)
@@ -128,35 +125,41 @@ canvas.grid(row=0, column=0, sticky=tkinter.N+tkinter.S+tkinter.E+tkinter.W)
 root.bind("<Key>", keypress)
 frame.pack()
 
-
+##Fond d'ecran
+current_file_dir = os.path.dirname(__file__)
+img_path = os.path.join(current_file_dir, "./files/Synthwave-Neon-80s-Background-4K.jpg")
+img = Image.open(img_path)
+x, y = int(HEIGHT*(16/9)), HEIGHT
+img = img.resize((x,y))
+tkimg = ImageTk.PhotoImage(img)
+canvas.create_image(SWidth, SHeight, image=tkimg) #SWidth et SHeight servent a mettre le milieu de l'image au centre du canvas
 
 
 #Création de la fenetre et des objets
 cam = Camera((0,0,-6))
 
-
-##objects = []  
-##for x in range(0,20,2):
-##    for z in range(0,20,2):
-##        for y in range(0,20,2):
-##            objects.append(Cube((x,y,z),random.choice(colors)))
-objects = []  
+objects = [] 
+############################## 
 for x in range(-5, 5):
     for z in range(-5, 5):
         objects.append(FloorPannel((x,0,z),"white"))
-objects.extend( [Cube((0,0,0),"red"),Cube((2,0,0), "blue"), Cube((-2,0,0), "yellow")])        
+###############################
+##objects = []  
+for x in range(0,20,2):
+    for z in range(0,20,2):
+        for y in range(0,-6,-2):
+            objects.append(Cube((x,y,z),random.choice(colors)))
 
-PILimg = Image.new('RGB', (WIDTH,HEIGHT), (0,0,0)) #chaque frame sera PILimg
-draw = ImageDraw.Draw(PILimg)
+##objects.extend( [Cube((0,0,0),"red"),Cube((2,0,0), "blue"), Cube((-2,0,0), "yellow")])        
+
 i,frameRate=0,0
 while True:
     t0 = time.time()
-    i+=1
 
     cos = (math.cos(cam.rot[0]), math.cos(cam.rot[1]))
     sin = (math.sin(cam.rot[0]), math.sin(cam.rot[1]))
     
-
+    objects.sort(key=lambda x: x.depth, reverse=True) #on ordonne objects selon l'ordre de depth
     #on affiche pas les objets les plue eloignes
     crop = int(len(objects)/10)
     #on calcule comment dessiner chaque cube
@@ -190,25 +193,19 @@ while True:
             ##DO THE DRAWING HERE
             face_list.sort(key=lambda x: x[-1], reverse=True)
             for face in face_list[-3:]: #on ne dessine que les 3 faces maximum visibles simultanément
-                #color = face[-2]
-                #del face[-2:]
-                draw.polygon(face[:-2], fill=face[-2], outline="black")
-    #print("computed", time.time()-t0)     
-#tLOL = time.time()
-    #print(( time.time()-tLOL ), "tkinter")
-    
-###################################################
-    #afficher image
-    img = ImageTk.PhotoImage(PILimg)
-    canvas.create_image(SWidth, SHeight, image=img) #SWidth et SHeight servent a mettre le milieu de l'image au centre du canvas
+                canvas.create_polygon(face[:-2], fill=face[-2], outline="black", tag="face")
+
+
     root.update()
-##################################################  lent, tank les fps
-    #on remet l'image (PILimg) à 0
-    draw.polygon(((0,0),(0,WIDTH),(HEIGHT,WIDTH),(HEIGHT,0)), fill="black") 
-    #print("drawn", time.time()-t0)
-    
-    frameRate += 1/(time.time()-t0)
+    #on remet l'image à 0
+
+    ##tLOL = time.time()
+    canvas.delete("face")
+    ##print(( time.time()-tLOL ), "canvas delete")
+
+    frameRate += time.time()-t0
+    i+=1
     if i > 50 :
-        print(frameRate/i,"fps")
+        print(1/((frameRate/i)+1e-10),"1/fps")
         i=0
         frameRate=0
