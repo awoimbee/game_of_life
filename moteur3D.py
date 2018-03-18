@@ -12,6 +12,12 @@ class Camera:
         self.pos = list(pos)
         self.rot = list(rot) #rot=rotation
 
+def walk_forward(event):
+    global cos, sin
+    x,y = sin[1]*sensMouv, cos[1]*sensMouv
+    cam.pos[0]+=x
+    cam.pos[2]+=y
+
 def keypress(event):
     """Calcule le déplacement et l'ordre d'affichage des objets en fonction de l'input."""
     #deplacement
@@ -23,9 +29,9 @@ def keypress(event):
     elif event.keysym == 'a':
         cam.pos[0]-=y
         cam.pos[2]+=x
-    elif event.keysym == 'w':
-        cam.pos[0]+=x
-        cam.pos[2]+=y
+    # elif event.keysym == 'w':
+    #     cam.pos[0]+=x
+    #     cam.pos[2]+=y
     elif event.keysym == 's':
         cam.pos[0]-=x
         cam.pos[2]-=y
@@ -50,14 +56,6 @@ def keypress(event):
         cam.rot[0]-=sensRot
     elif event.keysym == 'Down':
         cam.rot[0]+=sensRot
-
-    elif event.keysym == 'f':
-        global fastCoeff
-        if fastCoeff <0.7:
-            fastCoeff+=0.1
-        else :
-            fastCoeff=0
-        print("rendu rapide niveau", (fastCoeff*100//0.7), "%" )
 
     cos = (math.cos(cam.rot[0]), math.cos(cam.rot[1]))
     sin = (math.sin(cam.rot[0]), math.sin(cam.rot[1]))
@@ -88,7 +86,8 @@ def keypress(event):
                 obj.depth = (x**2)+(y**2)+(z**2)
                 #print(obj.depth, obj.color, "pos :", x,y,z)
                 obj.show = True
-    objects.sort(key=lambda x: x.depth, reverse=True) #on ordonne objects selon l'ordre de depth
+
+    objects.sort(key=lambda obj: obj.depth, reverse=True) #on ordonne objects selon l'ordre de depth
     ############################################################# impact *très minime* sur le framerate
 
 
@@ -154,7 +153,7 @@ class Ext3DModel:
                 break
         x,y,z = position
         self.pos = position
-        self.vertices = [(x+X/2, -y-Y/2, -z-Z/2) for X,Y,Z in self.vertices]
+        self.vertices = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.vertices]
         self.color=color
 
 
@@ -165,7 +164,7 @@ if __name__ == '__main__':
     SWidth, SHeight = WIDTH//2, HEIGHT//2 #semi width and semi height
     sensMouv = 1 #sensibilite des mouvements
     sensRot = 1/4 #sensibilite de la rotation
-    colors  = ((255,0,0), (0,255,0), (0,0,255), (20,100,230), (50,150,50))
+    colors  = ((167,0,0), (0,200,0), (0,0,108), (20,100,230), (50,150,50))
 
     cam = Camera((0,0,-3)) #position initiale de la caméra
 
@@ -176,12 +175,12 @@ if __name__ == '__main__':
     #     for z in range(-5, 5):
     #         objects.append(FloorPannel((x,0,z),(255,255,255)))
     ###############################
-    for x in range(0,2):
-        for z in range(0,2):
-            for y in range(0,-2,-1):
-                objects.append( Ext3DModel("cube",(x,y,z),random.choice(colors)) )
+    # for x in range(0,4,2):
+    #     for z in range(0,4,2):
+    #         for y in range(0,-4,-2):
+    #             objects.append( Ext3DModel("cube_big",(x,y,z),random.choice(colors)) )
 
-    #objects.extend( [Ext3DModel("cube",(0,0,0),((255,255,255))), Ext3DModel("cube",(2,0,0), (0,0,255)), Ext3DModel("cube",(-2,0,0), (0,255,0))] )        
+    objects.extend( [Ext3DModel("cube",(0,0,0),((255,255,255))), Ext3DModel("cube",(2,0,0), (0,0,255)), Ext3DModel("cube",(-2,0,0), (0,255,0))] )        
     #objects.append(Ext3DModel("body_highpoly",(0,0,0),(255,255,255) ))
 
 
@@ -196,6 +195,9 @@ if __name__ == '__main__':
     canvas = tkinter.Canvas(frame, width=WIDTH, height=HEIGHT, bg="#ffffff")
     canvas.grid(row=0, column=0, sticky=tkinter.N+tkinter.S+tkinter.E+tkinter.W)
     root.bind("<Key>", keypress)
+
+    root.bind("w", walk_forward)
+
     frame.pack()
 
     ##Fond d'ecran
@@ -212,10 +214,9 @@ if __name__ == '__main__':
     cos = (0,0)
     sin = (1,1)
     #i,frameRate=0,0
-    #fastCoeff=0
     while True:
         #t0 = time.time()
-
+        objects.sort(key=lambda x: x.depth, reverse=True)
         #on calcule comment dessiner chaque cube        
         for obj in objects :
             if obj.show :
@@ -225,34 +226,22 @@ if __name__ == '__main__':
                     depth = 0
                     face_points = [] #contient 3 ou plus sommets a connecter -> (x,y),(x,y),(x,y)
 
-                    #chaque point de la face a une normale, on fait la moyenne de ces normales pour avoir la normale de la face
-                    nx,ny,nz = 0.,0.,0.
-                    x,y,z=0,0,0
-                    for n in range( len(face[1])-1 ):  # ! les listes commences à 1 dans les fichiers obj !
-                        nx += obj.normals[face[1][n] -1][0]
-                        ny += obj.normals[face[1][n] -1][1]
-                        nz += obj.normals[face[1][n] -1][2]
-                        x,y,z = x+obj.vertices[face[0][n] -1][0], y+obj.vertices[face[0][n] -1][1], z+obj.vertices[face[0][n] -1][2]
+                    #chaque point de la face a une normale, on fait la moyenne de ces normales pour avoir la normale de la face (on ne calcule que la coordonnée "z" du vecteur car les autres ne sont pas utilisées)
+                    nz = sum( [obj.normals[face[1][n] -1][2] for n in range( len(face[1])-1 )  ] ) / (len(face[1])-1)
 
-                    
-                    x,y,z = x/len(face[1])-1 -cam.pos[0], y/len(face[1])-1 -cam.pos[1], z/len(face[1])-1 -cam.pos[2]  #on calcule l'origine de la droite normale à la face
-                    nx,ny,nz = nx/len(face[1])-1, ny/len(face[1])-1, nz/len(face[1])-1
-
-                    #On applique la formule de la rotation 2D au vecteur (on ne garde que nz car nx et ny seront quoi qu'il qrrive divisés par 0 doncx n'ont pas d'importance)
-                    #nz = (nz*cos[1]+nx*sin[1]) *cos[0]+ny*sin[0]
 
                     #Si ß est l'angle entre 2 vecteurs u et n, cos(ß)=(u.n)/(||u||*||n||) or ici ||u||=||n||=1 ; Donc cos(ß)=(u.n)
                     #Aussi, u=lightsource=(0,0,1) ; donc u.n = uz*nz = nz
-                    #On peut maintenant utiliser |cos(ß)| comme pourcentage de lumiere recue. Mais on ajoute aussi la distance de l'origine de la normale par rapport à la lumière
-                    lightReceived = nz*nz - ((x**2)+(y**2)+(z**2))/10
+                    #On peut maintenant utiliser nz=cos(ß) comme pourcentage de lumiere recue.
+                    lightReceived = nz + 0.2
 
                     faceColor=[]
                     for colorComponent in obj.color:
                         component = int(colorComponent*lightReceived)
                         if component>255:
                             component=255
-                        elif component<0:
-                            component=0
+                        elif component<5:
+                            component=5
 
                         faceColor.append(component) 
                     faceColor=tuple(faceColor)
