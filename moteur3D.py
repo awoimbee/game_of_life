@@ -20,9 +20,7 @@ class Camera:
 
 def rotate(pos, rotation):
     #pos[0] represente x ou y en fonction des cas, pos[1]=z
-    sin=math.sin(rotation)
-    cos=math.cos(rotation)
-    return pos[0]*cos-pos[1]*sin, pos[1]*cos+pos[0]*sin
+    return pos[0]*math.cos(rotation)-pos[1]*math.sin(rotation), pos[1]*math.cos(rotation)+pos[0]*math.sin(rotation)
 
 def keypress(event):
     #deplacement
@@ -70,6 +68,8 @@ class Cube:
 
     def __init__(self, position=(0,0,0), color="white"):
         x,y,z = position
+        self.pos=(x,y,z)
+        self.depth=0
         #on calcule les coordonnees de chaque arrete du cube en fonction de ses dimensions originales et sa position dans l'espace
         # X Y Z = position autour de l'origine
         self.vertices = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.verts]
@@ -101,13 +101,13 @@ frame.pack()
 
 
 cam = Camera((0,0,-6))
-objects = [Cube((0,0,0),"red"),Cube((2,0,0), "blue"), Cube((-2,0,0), "yellow")]
+##objects = [Cube((0,0,0),"red"),Cube((2,0,0), "blue"), Cube((-2,0,0), "yellow")]
 
-##objects = []  
-##for x in range(0,20,2):
-##    for z in range(0,20,2):
-##        for y in range(0,20,2):
-##            objects.append(Cube((x,y,z),random.choice(colors)))
+objects = []  
+for x in range(0,20,2):
+    for z in range(0,20,2):
+        for y in range(0,20,2):
+            objects.append(Cube((x,y,z),random.choice(colors)))
 
 
 PILimg = Image.new('RGB', (WIDTH,HEIGHT), (0,0,0)) #chaque frame sera PILimg
@@ -116,11 +116,38 @@ i,frameRate=0,0
 while True:
     t0 = time.time()
     i+=1
-    #### Création d'une liste de faces et leur profondeur
-    face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), tuple(couleur), int(profondeur) ], [ (x,y),...], ...]
 
-    #on calcule comment dessiner chaque cube
+    objects_showing = []
+    ##########################################################
+    # TODO = REVOVE NOT SHOWED OBJECTS
+    #on calcule dans quel ordre dessiner chaque cube - *on retire ceux qui sont hors champ* 
     for obj in objects :
+        x,y,z = obj.pos     #tout cela est calculé à partir du centre de chaque cube
+        x-=cam.pos[0]
+        y-=cam.pos[1]
+        z-=cam.pos[2]
+
+        x,z = rotate((x,z),cam.rot[1]) #x et z modifies par la rotation autour de y
+        y,z = rotate((y,z),cam.rot[0]) #y et z modifies par la rotation autour de x
+
+        if z>0:
+            #si z=0 on a une division par 0 et si z<0 alors l'affichage est hors champ
+            f=SWidth/z #coefficient de stereoscopie 
+            X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
+
+            if X<WIDTH+SWidth and Y<HEIGHT+SHeight and X>-SWidth and Y>-SHeight: #peu d'impact sur framerate
+                #on affiche pas ce qui est hors champ
+                obj.depth = (x**2)+(y**2)+(z**2)
+                objects_showing.append(obj)
+
+    objects_showing.sort(key=lambda x: x.depth, reverse=True) #on ordonne objects selon l'ordre de depth
+    ############################################################# super fast
+
+    #tLOL = time.time()
+    #print(1/(time.time()-tLOL), "sort 1/s")
+    #on calcule comment dessiner chaque cube
+    for obj in objects_showing :
+        face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), tuple(couleur), int(profondeur) ], [ (x,y),...], ...]
         for face in obj.faces:
             depth = 0
             face_points = [] #contient 4 sommets a connecter
@@ -132,42 +159,35 @@ while True:
 
                 x,z = rotate((x,z),cam.rot[1]) #x et z modifies par la rotation autour de y
                 y,z = rotate((y,z),cam.rot[0]) #y et z modifies par la rotation autour de x
+                
+                f=SWidth/z #coefficient de stereoscopie 
+                X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
 
-                if z>0:
-                    #si z=0 on a une division par 0 et si z<0 alors l'affichage est hors champ
-                    f=SWidth/z #coefficient de stereoscopie 
-                    X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
-
-                    if X<WIDTH+SWidth and Y<HEIGHT+SHeight and X>-SWidth and Y>-SHeight:
-                        #on affiche pas ce qui est hors champ
-                        face_points.append((X,Y)) 
-                        depth += (x**2)+(y**2)+(z**2) #se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
+                face_points.append((X,Y)) 
+                depth += (x**2)+(y**2)+(z**2) #se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
 
             if len(face_points) > 1:
                 #si il y a au moins 2 points à connecter
-                face_points.append( obj.color ) #face_points[4] est dedié à la couleur, cela permet une meilleure optimisation (20fps au lieu de 10!)
+                face_points.append(obj.color) #face_points[4] est dedié à la couleur, cela permet une meilleure optimisation (20fps au lieu de 10!)
                 face_points.append(depth) #face_point[5] dedié à la profondeur
                 face_list.append(face_points)
-        ##NEDD TO DO THE DRAWING HERE
+                
+        ##NEED TO DO THE DRAWING HERE
+        face_list.sort(key=lambda x: x[-1], reverse=False)
+        for face in face_list[:3]: #TODO on ne dessine que les 3 faces visibles
+            del face[-1]
+            color= face.pop()
+            draw.polygon(face, fill=color, outline="black")
 
-    #dessiner faces, le final
-    #on remet l'image à 0
-    draw.polygon(((0,0),(0,WIDTH),(HEIGHT,WIDTH),(HEIGHT,0)), fill="black")
-    #on ordonne face_list selon l'ordre de depth_list (maintenant intégré à face_list, en derniere position ="-1"), pour avoir une profondeur de champ
-    face_list.sort(key=lambda x: x[-1], reverse=True)
-    
-    for face in face_list :
-        del face[-1]
-        color= face.pop() #on recupere la couleur et la retire de face qui servira a definir la forme de la face
-        #print("putain", face)
-        draw.polygon(face, fill=color, outline="black")
 
     #afficher image
     img = ImageTk.PhotoImage(PILimg)
     canvas.create_image(SWidth, SHeight, image=img) #SWidth et SHeight servent a mettre le milieu de l'image au centre du canvas
-
-    #on met à jour l'affichage
     root.update()
+    
+    #on remet l'image à 0
+    draw.polygon(((0,0),(0,WIDTH),(HEIGHT,WIDTH),(HEIGHT,0)), fill="black") 
+    
     frameRate += 1/(time.time()-t0)
     if i > 50 :
         print(frameRate/i,"fps")
