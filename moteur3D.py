@@ -2,14 +2,14 @@ import tkinter
 import PIL
 from PIL import ImageTk, Image, ImageDraw
 import time
-import math
+import math, random
 
-WIDTH = 800
-HEIGHT = 800
+WIDTH = 1000
+HEIGHT = 1000
 SWidth, SHeight = WIDTH//2, HEIGHT//2 #semi width and semi height
 sensMouv = 0.25 #sensibilite des mouvements
 sensRot = 1/7 #sensibilite de la rotation
-
+colors  = ["red","green","blue","orange","purple","pink","yellow"]
 
 
 class Camera:
@@ -18,10 +18,9 @@ class Camera:
         self.rot = list(rot) #rot=rotation
 
 def rotate(pos, rotation):
-    a,z=pos #a est x ou y
+    a,z=pos #a represente x ou y en fonction des cas 
     sin=math.sin(rotation)
     cos=math.cos(rotation)
-    #return z*cos+a*cos, z*sin-x*sin
     return a*cos-z*sin, z*cos+a*sin
 
 def keypress(event):
@@ -83,23 +82,26 @@ frame.pack()
 
 
 
-
-#sommets du cube selon le repere (x,y,z) puis les arretes du cube
+#sommets du cube selon le repere (x,y,z) puis les arretes du cube, puis ses faces
 vertices = (-1,1,-1),(1,1,-1),(1,-1,-1),(-1,-1,-1), (-1,1,1),(1,1,1),(1,-1,1),(-1,-1,1)
 edges = (0,1),(1,2),(2,3),(3,0), (0,4), (1,5),(2,6),(3,7), (4,5),(5,6),(6,7),(7,4)
-faces = (0,1,2,3),(4,5,6,7),(0,3,7,4),(1,2,6,5),(3,2,6,7),(0,1,5,4)
+faces = (4,5,6,7),(0,3,7,4),(1,2,6,5),(3,2,6,7),(0,1,5,4),(0,1,2,3)
 
-cam=Camera((0,0,-5))
+cam=Camera((0,0,-6))
+
 
 while True:
     # chaque frame sera PILimg
-    PILimg = Image.new('RGB', (WIDTH,HEIGHT), (255,255,255))
+    PILimg = Image.new('RGB', (WIDTH,HEIGHT), (0,0,0))
     
 
-    draw = ImageDraw.Draw(PILimg)
-    for edge in edges:
-        points = [] #contient 2 sommets a connecter par arrete
-        for x,y,z in (vertices[edge[0]], vertices[edge[1]]):
+    #### Création d'une liste de faces et leur profondeur
+    face_list=[] #contient : [points1, points2, ...] => [ [ [x,y],[x,y],[x,y],[x,y] ], [ [x,y],...], ...]
+    depth_list=[]
+    for face in faces:
+        depth = 0
+        face_points = [] #contient 4 sommets a connecter
+        for x,y,z in (vertices[face[0]], vertices[face[1]], vertices[face[2]], vertices[face[3]]):
             #le monde bouge par rapport a la camera et non le contraire
             x-=cam.pos[0]
             y-=cam.pos[1]
@@ -110,19 +112,31 @@ while True:
             
             f=SWidth/(z+0.0001) #un coefficient de stereoscopie, z pas egal a 0 donc pas de division par 0    
 
-            x,y = int(x*f)+SWidth, int(y*f)+SHeight #position des sommets sur l'image 2D
+            x,y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
 
-            #x et y doivent cerrespondre a des pixels du canvas !
+            #x et y doivent cerrespondre a des pixels du canvas ! (on evite le index out of range)
+            #TODO changer ça pour un truc qui fonctionne vraiment
             x = clamp(x,0,WIDTH)
             y = clamp(y,0,HEIGHT)
-            
-            points.append([x,y]) 
-            #PILimg.putpixel ((x,y), ( 255, 0, 0 )) #on met les sommets
-        draw.line((points[0][0],points[0][1], points[1][0],points[1][1]), fill=128)
+
+            face_points.append([x,y]) 
+            depth += z**4 #on exacèrbe la profondeur, TODO ne pa la calculer que a partir de z
+        
+        face_points.append([colors[faces.index(face)]]) #points[4][0] est dedié à la couleur
+        depth_list.append(depth)
+        face_list.append(face_points)
+
+    #dessiner faces
+    face_list=[x for _,x in sorted(zip(depth_list,face_list), reverse=True)] #on ordonne face_list selon l'ordre de depth_list
+    draw = ImageDraw.Draw(PILimg)
+    for face in face_list :
+        color=face[4][0]
+        draw.polygon((tuple(face[0]),tuple(face[1]),tuple(face[2]),tuple(face[3])), fill=color, outline="black")
     del draw
 
+    #afficher image
     img = ImageTk.PhotoImage(PILimg)
-    oneFrame = canvas.create_image(SWidth, SHeight, image=img) #jsp pq faut utiliser SW et SH
+    oneFrame = canvas.create_image(SWidth, SHeight, image=img) #SWidth et SHeight servent a mettre le milieu de l'image au centre du canvas
 
     root.update()
     canvas.delete(oneFrame)
