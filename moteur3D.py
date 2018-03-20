@@ -8,8 +8,6 @@ import _thread
 WIDTH = 1000
 HEIGHT = 1000
 SWidth, SHeight = WIDTH//2, HEIGHT//2 #semi width and semi height
-sensMouv = 1/5 #sensibilite des mouvements
-sensRot = 1/10 #sensibilite de la rotation
 
 colors  = ("#6D8572", "#FAE705", "#343A83", "#00FF00", "#FFB400", "#AD009E")
 pressedkeys=[]
@@ -31,12 +29,12 @@ def movement():
     """Calcule le déplacement et l'ordre d'affichage des objets en fonction de l'input."""
 
     sensMouv = 1/10 #sensibilite des mouvements
-    sensRot = 1/40 #sensibilite de la rotation
+    sensRot = 1/30 #sensibilite de la rotation
     # import time as time
     while(1):
         time.sleep(0.01)
         for key in pressedkeys:
-            x,y = math.sin(cam.rot[1]), math.cos(cam.rot[1])
+            x,y = math.sin(cam.rot[1])*sensMouv, math.cos(cam.rot[1])*sensMouv
             if key == 'd':
                 cam.pos[0]+=y
                 cam.pos[2]-=x
