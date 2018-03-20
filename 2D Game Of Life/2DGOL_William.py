@@ -28,15 +28,11 @@ def display():
     for row in range(len(board)):
         for column in range(len(board[0])):
 
-            #Cas d'une case morte
-            if board[row][column] == 0:
-                canvas.create_rectangle(x, y, x+c, y+c,fill="white", tag="cell")
-                x += c
             #Cas d'une case vivante
-            elif board[row][column] == 1:
+            if board[row][column] == 1:
                 canvas.create_rectangle(x, y, x+c, y+c,fill="black", tag="cell")
-                x += c
-
+            #on passe a la cellule suivante
+            x += c
             #Retour à la ligne
             if x >= 20*c:
                 x = 0
@@ -49,69 +45,55 @@ def display():
 
 def neighborsFinding():
     "Chercher voisins + calculer couleur nouvelle case"
-    #Parcours du tableau de long en large
-    for x in range(len(board)):
-        for y in range(len(board[0])):
+    global keepgoing
+    keepgoing = True
+    while keepgoing:
+        #Parcours du tableau de long en large
+        for x in range(len(board)):
+            for y in range(len(board[0])):
 
-            neighbors = 0 #On initialise à 0 voisins
+                neighbors = 0 #On initialise à 0 voisins
 
-            #Parcours des voisins dans un rayon de 1, soit 3x3 cases
-            for i in range(-1, 2): #Test des voisins par ligne
-                for j in range(-1, 2): #Test voisins dans cases dans les lignes
+                #Parcours des voisins dans un rayon de 1, soit 3x3 cases
+                for i in range(-1, 2): #Test des voisins par ligne.
+                    for j in range(-1, 2): #Test voisins dans cases dans les lignes
+                        neighbors+=board[(x+i+len(board))%len(board)][(y+j+len(board[0]))%len(board[0])]
 
-                    neighbors+=board[(x+i+len(board))%len(board)][(y+j+len(board[0]))%len(board[0])]
+                #Retrait de la cellule étudiée (pas voisine)
+                neighbors -= board[x][y]
 
-            #Retrait de la cellule étudiée (pas voisine)
-            neighbors -= board[x][y]
-
-            #Application des règles du jeu de la vie
-            if board[x][y]==0 and neighbors==3:
-                board[x][y] = 1
-
-            elif (board[x][y]==1 and neighbors==3):
-                board[x][y] = 1
-            elif (board[x][y]==1 and neighbors==2):
-                board[x][y] = 1
-            else:
-                board[x][y] = 0
-
-    #Après le calcul de toutes les nouvelles couleurs, affichage.
-    display()
-
-
-
-def loop():
-    "Lance les étapes infinies"
-    global a
-    a = 1
-    while a==1:
-        neighborsFinding()
+                #Application des règles du jeu de la vie
+                if board[x][y]==0 and neighbors==3:
+                    board[x][y] = 1
+                elif (board[x][y]==1 and neighbors==3):
+                    board[x][y] = 1
+                elif (board[x][y]==1 and neighbors==2):
+                    board[x][y] = 1
+                else:
+                    board[x][y] = 0
+        #Après le calcul de toutes les nouvelles couleurs, affichage.
+        display()
 
 def stop():
-    "Stop les étapes infinies"
-    global a
-    a = 0
-
+    global keepgoing
+    keepgoing = False
 
 
 #####------FENETRE PRINCIPALE-----#####
 
 if __name__ == "__main__":
-    c, a = 20, 1
+    c = 20
+    keepgoing=True
     window = Tk()
     window.title("Test jeu de la vie William")
 
     #Le tableau généré aléatoirement
     canvas = Canvas(window, width=c*20, height=c*20, bg="white")
     canvas.grid(column=1, row=1, padx=10, pady=10, rowspan=10)
-    display()
 
-    #Bouton pour faire une étape
-    stepButton = Button(window, text="Étape suivante", command=neighborsFinding)
-    stepButton.grid(column=2, row=1, padx=10, pady=10, columnspan=2)
 
     #Bouton pour faire deux étapes
-    infButton = Button(window, text="Lancer", command=loop)
+    infButton = Button(window, text="Lancer", command=neighborsFinding)
     infButton.grid(column=2, row=2, padx=10, pady=10)
 
     stopButton = Button(window, text="Stop", command=stop)
@@ -119,4 +101,3 @@ if __name__ == "__main__":
 
     #Activation du gestionnaire d'évènement de la fenêtre
     window.mainloop()
-    loop()
