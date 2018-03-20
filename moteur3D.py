@@ -55,7 +55,7 @@ def movement():
 
             #exit
             elif key == 'Escape':
-                root.destroy()
+                _thread.interrupt_main() #c'est pas fou comme solution
 
             #rotation
             # axe X     axe Y
@@ -75,8 +75,6 @@ def rotate2D(pos, rotation):
     sin=math.sin(rotation)
     cos=math.cos(rotation)
     return pos[0]*cos-pos[1]*sin, pos[1]*cos+pos[0]*sin
-
-
 
 
 class Cube:
@@ -114,7 +112,7 @@ root = tkinter.Tk()
 frame = tkinter.Frame(root, width=WIDTH, height=HEIGHT)
 frame.grid_rowconfigure(0, weight=1)
 frame.grid_columnconfigure(0, weight=1)
-
+#création du canvas et paramétrage de la récupération de l'entrée utilisateur
 canvas = tkinter.Canvas(frame, width=WIDTH, height=HEIGHT, bg="#ffffff")
 canvas.grid(row=0, column=0, sticky=tkinter.N+tkinter.S+tkinter.E+tkinter.W)
 root.bind("<KeyPress>", keydown)
@@ -130,27 +128,20 @@ x, y = int(HEIGHT*(16/9)), HEIGHT
 img = img.resize((x,y))
 tkimg = ImageTk.PhotoImage(img)
 canvas.create_image(SWidth, SHeight, image=tkimg) #SWidth et SHeight servent a mettre le milieu de l'image au centre du canvas
+#####
 
-
-#Création de la fenetre et des objets
+#Création de la caméra
 cam = Camera((0,0,-6))
 
+#Création des objets à afficher
 objects = [] 
-############################## 
-for x in range(-5, 5):
-    for z in range(-5, 5):
-        objects.append(FloorPannel((x,0,z),"white"))
-###############################
-##objects = []  
-for x in range(0,20,2):
-    for z in range(0,20,2):
-        for y in range(0,-6,-2):
-            objects.append(Cube((x,y,z),random.choice(colors)))
+objects.extend([ FloorPannel((x,0,z),"white") for z in range(-5,5) for x in range(-5,5) ])
+objects.extend([ Cube((x,y,z), random.choice(colors)) for y in range(0,-6,-2) for z in range(0,20,2) for x in range(0,20,2)  ])
+#objects.extend( [Cube((0,0,0),"red"),Cube((2,0,0), "blue"), Cube((-2,0,0), "yellow")])        
 
-##objects.extend( [Cube((0,0,0),"red"),Cube((2,0,0), "blue"), Cube((-2,0,0), "yellow")])        
 
 i,frameRate=0,0
-_thread.start_new_thread(movement, ( ))
+_thread.start_new_thread(movement, ( )) #les déplacements sont calculés dans un autre thread
 while True:
     t0 = time.time()
 
