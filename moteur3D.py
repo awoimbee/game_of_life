@@ -77,11 +77,8 @@ def rotate2D(pos, rotation):
     return pos[0]*cos-pos[1]*sin, pos[1]*cos+pos[0]*sin
 
 
-class Cube:
-    #sommets du cube quand il est positionné sur l'origine des reperes x,y,z puis ses arretes, puis ses faces
-    vertices = (-1,1,-1),(1,1,-1),(1,-1,-1),(-1,-1,-1), (-1,1,1),(1,1,1),(1,-1,1),(-1,-1,1)
-    #edges = (0,1),(1,2),(2,3),(3,0), (0,4), (1,5),(2,6),(3,7), (4,5),(5,6),(6,7),(7,4) #ne sert a rien
-    faces = (4,5,6,7),(0,3,7,4),(1,2,6,5),(3,2,6,7),(0,1,5,4),(0,1,2,3)
+class Object:
+    ''' Classe représentant tous les objets '''
     depth=0
     show=False
 
@@ -91,20 +88,24 @@ class Cube:
         #on calcule les coordonnees de chaque arrete du cube en fonction de ses dimensions et sa position dans l'espace
         # X,Y,Z = un point de l'objet
         self.vertices = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.vertices]
-        #jsp pas pq faut diviser par 2 mais ça fonctionne mieux
+        #jsp pas pq faut diviser par 2 mais ça fonctionne mieux <- ça change juste les dimensions des objets
         self.color=color
 
-class FloorPannel:
-    vertices = (1,1,1),(1,1,-1),(-1,1,-1),(-1,1,1)
-    #edges = (0,1),(1,2),(2,3),(3,0)
-    faces = ((0,1,2,3), ) #un obj a besoin de 2 faces minimum
-    depth=0
-    show=False
+class Cube(Object):
+    #sommets du cube quand il est positionné sur l'origine des reperes x,y,z puis ses arretes, puis ses faces
+    vertices = (-1,1,-1),(1,1,-1),(1,-1,-1),(-1,-1,-1), (-1,1,1),(1,1,1),(1,-1,1),(-1,-1,1)
+    #edges = (0,1),(1,2),(2,3),(3,0), (0,4), (1,5),(2,6),(3,7), (4,5),(5,6),(6,7),(7,4) #ne sert a rien
+    faces = (4,5,6,7),(0,3,7,4),(1,2,6,5),(3,2,6,7),(0,1,5,4),(0,1,2,3)
+
     def __init__(self, position=(0,0,0), color="white"):
-        x,y,z = position
-        self.pos = position
-        self.vertices = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.vertices]
-        self.color=color
+        Object.__init__(self, position, color)
+
+class FloorPannel(Object):
+    vertices = (1,1,1),(1,1,-1),(-1,1,-1),(-1,1,1)
+    faces = ((0,1,2,3),(0,1,2,3),(0,1,2,3),(0,1,2,3) ) #Dirty patch, c'est à cause de "face_list.extend(obj_faces[3:])" plus bas
+
+    def __init__(self, position=(0,0,0), color="white"):
+        Object.__init__(self, position, color)
         
 
 ##Création de la fenetre
