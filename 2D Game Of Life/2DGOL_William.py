@@ -14,6 +14,7 @@
 #Importation de divers modules utiles
 from tkinter import *
 from random import randint
+import time
 
 
 
@@ -29,11 +30,11 @@ def display():
 
             #Cas d'une case morte
             if board[row][column] == 0:
-                canvas.create_rectangle(x, y, x+c, y+c, fill="white")
+                canvas.create_rectangle(x, y, x+c, y+c,fill="white", tag="cell")
                 x += c
             #Cas d'une case vivante
             elif board[row][column] == 1:
-                canvas.create_rectangle(x, y, x+c, y+c, fill="black")
+                canvas.create_rectangle(x, y, x+c, y+c,fill="black", tag="cell")
                 x += c
 
             #Retour à la ligne
@@ -41,6 +42,8 @@ def display():
                 x = 0
         y += c
     window.update()
+    time.sleep(0.1)
+    canvas.delete("cell")
 
 
 
@@ -56,9 +59,7 @@ def neighborsFinding():
             for i in range(-1, 2): #Test des voisins par ligne
                 for j in range(-1, 2): #Test voisins dans cases dans les lignes
 
-
                     neighbors+=board[(x+i+len(board))%len(board)][(y+j+len(board[0]))%len(board[0])]
-
 
             #Retrait de la cellule étudiée (pas voisine)
             neighbors -= board[x][y]
@@ -67,12 +68,12 @@ def neighborsFinding():
             if board[x][y]==0 and neighbors==3:
                 board[x][y] = 1
 
-            elif (board[x][y]==1 and neighbors==3) or (board[x][y]==1 and neighbors==2):
+            elif (board[x][y]==1 and neighbors==3):
                 board[x][y] = 1
-
+            elif (board[x][y]==1 and neighbors==2):
+                board[x][y] = 1
             else:
                 board[x][y] = 0
-
 
     #Après le calcul de toutes les nouvelles couleurs, affichage.
     display()
@@ -83,14 +84,14 @@ def loop():
     "Lance les étapes infinies"
     global a
     a = 1
-    while a<100:
+    while a==1:
         neighborsFinding()
-        a+=1
 
 def stop():
     "Stop les étapes infinies"
     global a
     a = 0
+
 
 
 #####------FENETRE PRINCIPALE-----#####
@@ -118,3 +119,4 @@ if __name__ == "__main__":
 
     #Activation du gestionnaire d'évènement de la fenêtre
     window.mainloop()
+    loop()
