@@ -1,9 +1,9 @@
 ﻿import tkinter
 from PIL import ImageTk, Image
 import math, random
-import time
 import os
 import _thread
+import time
 
 WIDTH = 1000
 HEIGHT = 1000
@@ -30,7 +30,7 @@ def movement():
 
     sensMouv = 1/10 #sensibilite des mouvements
     sensRot = 1/30 #sensibilite de la rotation
-    # import time as time
+    
     while(1):
         time.sleep(0.01)
         for key in pressedkeys:
@@ -68,6 +68,35 @@ def movement():
                 cam.rot[0]-=sensRot
             elif key == 'Down':
                 cam.rot[0]+=sensRot
+        ##########################################################
+        # REVOVE NOT SHOWED OBJECTS
+        #mettre ça ici permet d'améliorer le framerate
+        #on calcule dans quel ordre dessiner chaque cube - *on retire ceux qui sont hors champ*
+        global objects
+        for obj in objects :
+            obj.show = False
+            #On calcule la position du centre de chaque objet pour determiner si il doit etre affiché et dans quel ordre il doit etre dessiné
+            x,y,z = obj.pos    
+            x-=cam.pos[0]
+            y-=cam.pos[1]
+            z-=cam.pos[2]
+
+            x,z = rotate2D((x,z),cam.rot[1]) #x et z modifies par la rotation autour de y
+            y,z = rotate2D((y,z),cam.rot[0]) #y et z modifies par la rotation autour de x
+
+            if z>0:
+                #si z=0 on a une division par 0 et si z<0 alors l'affichage est hors champ
+                f=SWidth/z #coefficient de stereoscopie 
+                X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
+
+                if X<WIDTH+SWidth and Y<HEIGHT+SHeight and X>-SWidth and Y>-SHeight: #peu d'impact sur framerate
+                    obj.depth = (x**2)+(y**2)+(z**2)
+                    #print(obj.depth, obj.color, "pos :", x,y,z)
+                    obj.show = True
+
+        objects.sort(key=lambda x: x.depth, reverse=True) #on ordonne objects selon l'ordre de depth
+        ############################################################# impact *très minime* sur le framerate
+
 
 
 def rotate2D(pos, rotation):
@@ -82,7 +111,7 @@ class Object:
     depth=0
     show=False
 
-    def __init__(self, position=(0,0,0), color="white"):
+    def __init__(self, position=(0,0,0), color="#000000"):
         x,y,z = position
         self.pos = position
         #on calcule les coordonnees de chaque arrete du cube en fonction de ses dimensions et sa position dans l'espace
@@ -136,9 +165,10 @@ cam = Camera((0,0,-6))
 
 #Création des objets à afficher
 objects = [] 
-objects.extend([ FloorPannel((x,0,z),"white") for z in range(-5,5) for x in range(-5,5) ])
-objects.extend([ Cube((x,y,z), random.choice(colors)) for y in range(0,-6,-2) for z in range(0,20,2) for x in range(0,20,2)  ])
-#objects.extend( [Cube((0,0,0),"red"),Cube((2,0,0), "blue"), Cube((-2,0,0), "yellow")])        
+#objects.extend([ FloorPannel((x,0,z),"white") for z in range(-5,5) for x in range(-5,5) ])
+#objects.extend([ Cube((x,y,z), random.choice(colors)) for y in range(0,-6,-2) for z in range(0,20,2) for x in range(0,20,2)  ])
+#objects.extend( [Cube((0,0,0),"red"),Cube((2,0,0), "blue"), Cube((-2,0,0), "yellow")])
+objects.extend([ Cube((x,y,0), random.choice(colors)) for y in range(0,20,2) for x in range(0,20,2) ])
 
 
 i,frameRate=0,0
@@ -147,52 +177,63 @@ while True:
     t0 = time.time()
 
 
-
     face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), tuple(couleur), int(profondeur) ], [ (x,y),...], ...]
     
     #on calcule comment dessiner chaque cube
-    for obj in objects :
-
-        obj_faces=[]
-        for face in obj.faces:
+    for i in range(len(objects)) :
+        obj = objects[i]
+        if obj.show :
+            neighbors = sum([ objects[i+l].depth for l in range(-3, 3) if l != 0 and 0<i+l<len(objects) ]) #6 voisins en 3d
+            print(objects[i].depth)
+            if neighbors>1:
+                obj.color="#FFFFFF"
+            elif obj.color=="#000000" and neighbors==3:
+                obj.color="#FFFFFF"
+            elif (obj.color=="#FFFFFF" and neighbors==3):
+                obj.color="#FFFFFF"
+            elif (obj.color=="#FFFFFF" and neighbors==2):
+                obj.color="#FFFFFF"
+            else:
+                obj.color="#000000"
+        
+            obj_faces=[]
+            for face in obj.faces:
                 
-            depth = 0
-            face_points = [] #contient 4 sommets a connecter -> (x,y),(x,y),(x,y),(x,y)
-            for x,y,z in (obj.vertices[face[0]], obj.vertices[face[1]], obj.vertices[face[2]], obj.vertices[face[3]]):
-                    #le monde bouge par rapport a la camera et non le contraire
-                x-=cam.pos[0]
-                y-=cam.pos[1]
-                z-=cam.pos[2]
+                depth = 0
+                face_points = [] #contient 4 sommets a connecter -> (x,y),(x,y),(x,y),(x,y)
+                for x,y,z in (obj.vertices[face[0]], obj.vertices[face[1]], obj.vertices[face[2]], obj.vertices[face[3]]):
+                    #le monde bouge par rapport a la camera
+                    x-=cam.pos[0]
+                    y-=cam.pos[1]
+                    z-=cam.pos[2]
 
-                x,z = rotate2D((x,z),cam.rot[1]) #x et z modifies par la rotation autour de y
-                y,z = rotate2D((y,z),cam.rot[0]) #y et z modifies par la rotation autour de x
+                    x,z = rotate2D((x,z),cam.rot[1]) #x et z modifies par la rotation autour de y
+                    y,z = rotate2D((y,z),cam.rot[0]) #y et z modifies par la rotation autour de x
 
-                if not z>0:
-                    face_points = None
-                    break
-                f=SWidth/z #coefficient de stereoscopie
-                X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D ; +SWidth et SHeight car le repere xyz est placé au milieu de l'ecran
+                    if not z>0:
+                        face_points = None
+                        break
+                    f=SWidth/z #coefficient de stereoscopie
+                    X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D ; +SWidth et SHeight car le repere xyz est placé au milieu de l'ecran
 
-                if not -50<X<WIDTH+50 or not -50<Y<HEIGHT+50 : #peut etre ajuste pour les performances
-                    #on affiche pas ce qui est hors champ
-                    face_points=None
-                    break
+                    if not -50<X<WIDTH+50 or not -50<Y<HEIGHT+50 : #peut etre ajuste pour les performances
+                        #on affiche pas ce qui est hors champ
+                        face_points=None
+                        break
 
-                face_points.append((X, Y)) #position en pixels des sommets sur l'image 2D
-                depth += (x**2)+(y**2)+(z**2) #se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
-            if face_points is not None:
+                    face_points.append((X, Y)) #position en pixels des sommets sur l'image 2D
+                    depth += (x**2)+(y**2)+(z**2) #se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
+                if face_points is not None:
                 #si il y a au moins 2 points à connecter
-                face_points.extend( (obj.color, depth) )
+                    face_points.extend( (obj.color, depth) )
                     #face_points[4] est dedié à la couleur, cela permet une meilleure optimisation (20fps au lieu de 10!)
                     #face_point[5] dedié à la profondeur
                 
-                obj_faces.append(face_points)
-        obj_faces.sort(key=lambda x: x[-1], reverse=True)     
-        face_list.extend(obj_faces[3:]) #vu qu'on affiche que des cubes il suffit d'afficher les 3 faces visibles et non les 6 faces du cube
-        
-    face_list.sort(key=lambda x: x[-1], reverse=True)
-    for face in face_list: #on ne dessine que les 3 faces maximum visibles simultanément
-        canvas.create_polygon(face[:-2], fill=face[-2], outline="black", tag="face")
+                    obj_faces.append(face_points)
+
+            obj_faces.sort(key=lambda x: x[-1], reverse=True)
+            for face in obj_faces[-3:]: #on ne dessine que les 3 faces maximum visibles simultanément
+                canvas.create_polygon(face[:-2], fill=face[-2], outline="black", tag="face")
 
 
     root.update()
