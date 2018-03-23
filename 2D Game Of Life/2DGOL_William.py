@@ -18,11 +18,9 @@ import time
 
 
 
-#Création et remplissage aléatoire du tableau
-board = [[randint(0, 1) for i in range(20)] for j in range(20)]
-
 def display():
     "Affiche un tableau dans le canvas à partir de la liste"
+    
     x, y = 0, 0
     #Parcours du tableau de long en large
     for row in range(len(board)):
@@ -30,18 +28,19 @@ def display():
 
             #Cas d'une case morte
             if board[row][column] == 0:
-                canvas.create_rectangle(x, y, x+casePix, y+casePix, fill="white", tag="cell")
+                canvas.create_rectangle(x, y, x+cPix, y+cPix, fill="white", tag="cell")
 
 
             #Cas d'une case vivante
             if board[row][column] == 1:
-                canvas.create_rectangle(x, y, x+casePix, y+casePix, fill="black", tag="cell")
+                canvas.create_rectangle(x, y, x+cPix, y+cPix, fill="black", tag="cell")
             #on passe a la cellule suivante
-            x += casePix
+            x += cPix
             #Retour à la ligne
-            if x >= 20*casePix:
+            if x >= caseNumber*cPix:
                 x = 0
-        y += casePix
+        y += cPix
+    #Affichage final
     window.update()
     time.sleep(0.05)
     canvas.delete("cell")
@@ -50,6 +49,7 @@ def display():
 
 def neighborsFinding():
     "Chercher voisins + calculer couleur nouvelle case"
+    
     global keepgoing
     keepgoing = True
     while keepgoing:
@@ -79,15 +79,37 @@ def neighborsFinding():
         #Après le calcul de toutes les nouvelles couleurs, affichage.
         display()
 
+
+
 def stop():
+    "Arrête le programme grâce à un interrupteur"
+    
     global keepgoing
     keepgoing = False
 
+
+
 def changeColor(event):
-    "Changer la couleur de la case cliquée"
+    "Change la couleur de la case cliquée"
+
+    global board
+    
     coordX = str(event.x)
     coordY = str(event.y)
-    coordVar.set("Coordonnées : " + coordX + " ; " + coordY)
+    canvCoords.set("Coordonnées : " + coordX + " ; " + coordY)
+    
+    boardX = int(coordX)//caseNumber
+    boardY = int(coordY)//caseNumber
+    boardCoords.set("Dans le tableau : " + str(boardX) + " ; " + str(boardY))
+
+    if board[boardX][boardY]==0:
+        board[boardX][boardY] = 1
+        
+    elif board[boardX][boardY]==1:
+        board[boardX][boardY] = 0
+        
+
+    
     
 
 
@@ -95,28 +117,37 @@ def changeColor(event):
 
 if __name__ == "__main__":
 
-    #Nombre de pixels d'une case
-    casePix = 30
-
-    keepgoing=True
-    window = Tk()
-    window.title("Test jeu de la vie William")
-
-    #Le tableau généré aléatoirement
-    canvas = Canvas(window, width=casePix*20, height=casePix*20, bg="white")
-    canvas.grid(column=1, row=1, padx=10, pady=10, rowspan=10)
+    #-- INITIALISATION DES VARIABLES --#
     
-    #Localisation de clics dans le canvas
-    canvas.bind("<Button-1>", changeColor)
-
-    #Affichage des coordonnées de la souris
-    coordVar = StringVar()
-    coordVar.set("Coordonnées")
-    coordDisp = Label(window, textvariable=coordVar)
-    coordDisp.grid(column=2, row=4, padx=10, pady=10)
+    cPix = 25 #Nombre de pixels d'une case
+    caseNumber = 25 #Nombre de cases
+    keepgoing=True #Interrupteur
+    window = Tk()
+    window.title("Le Jeu de La Vie")
+    board = [[randint(0, 1) for i in range(caseNumber)] for j in range(caseNumber)] #Tableau 
 
 
-    #Bouton pour faire deux étapes
+
+
+    #-- TALBEAU --#
+    
+    canvas = Canvas(window, width=cPix*caseNumber, height=cPix*caseNumber, bg="white")
+    canvas.grid(column=1, row=1, padx=5, pady=5, rowspan=10)
+    canvas.bind("<Button-1>", changeColor) #Localisation des clics dans le canvas
+
+    canvCoords = StringVar() #Coordonnées dans le canvas
+    canvCoords.set("Coordonnées :")
+    cDisp1 = Label(window, textvariable=canvCoords)
+    cDisp1.grid(column=2, row=4, padx=5, pady=5)
+
+    boardCoords = StringVar() #Coordonnées dans le tableau
+    boardCoords.set("Dans le tableau :")
+    cDisp2 = Label(window, textvariable=boardCoords)
+    cDisp2.grid(column=2, row=5, padx=5, pady=5)
+
+
+    #-- BOUTONS UTILES --#
+    
     infButton = Button(window, text="Lancer", command=neighborsFinding)
     infButton.grid(column=2, row=2, padx=10, pady=10)
 
