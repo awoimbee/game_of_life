@@ -9,7 +9,7 @@ WIDTH = 1000
 HEIGHT = 1000
 SWidth, SHeight = WIDTH//2, HEIGHT//2 #semi width and semi height
 
-colors  = ("#6D8572", "#FAE705", "#343A83", "#00FF00", "#FFB400", "#AD009E")
+colors  = ("#000000", "#FFFFFF", "#6D8572", "#FAE705", "#343A83", "#00FF00", "#FFB400", "#AD009E")
 pressedkeys=[]
 
 class Camera:
@@ -111,14 +111,14 @@ class Object:
     depth=0
     show=False
 
-    def __init__(self, position=(0,0,0), color="#000000"):
+    def __init__(self, position=(0,0,0), life=0):
         x,y,z = position
         self.pos = position
         #on calcule les coordonnees de chaque arrete du cube en fonction de ses dimensions et sa position dans l'espace
         # X,Y,Z = un point de l'objet
         self.vertices = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.vertices]
         #jsp pas pq faut diviser par 2 mais ça fonctionne mieux <- ça change juste les dimensions des objets
-        self.color=color
+        self.life=life
 
 class Cube(Object):
     #sommets du cube quand il est positionné sur l'origine des reperes x,y,z puis ses arretes, puis ses faces
@@ -166,9 +166,9 @@ cam = Camera((0,0,-6))
 #Création des objets à afficher
 objects = [] 
 #objects.extend([ FloorPannel((x,0,z),"white") for z in range(-5,5) for x in range(-5,5) ])
-#objects.extend([ Cube((x,y,z), random.choice(colors)) for y in range(0,-6,-2) for z in range(0,20,2) for x in range(0,20,2)  ])
+objects.extend([ Cube((x,y,z), random.choice([0,1])) for y in range(0,-6,-2) for z in range(0,20,2) for x in range(0,20,2)  ])
 #objects.extend( [Cube((0,0,0),"red"),Cube((2,0,0), "blue"), Cube((-2,0,0), "yellow")])
-objects.extend([ Cube((x,y,0), random.choice(colors)) for y in range(0,20,2) for x in range(0,20,2) ])
+#objects.extend([ Cube((x,y,0), random.choice([0,1])) for y in range(0,20,2) for x in range(0,20,2) ])
 
 
 i,frameRate=0,0
@@ -180,21 +180,22 @@ while True:
     face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), tuple(couleur), int(profondeur) ], [ (x,y),...], ...]
     
     #on calcule comment dessiner chaque cube
-    for i in range(len(objects)) :
-        obj = objects[i]
+    for objIndex in range(len(objects)) :
+        obj = objects[objIndex]
         if obj.show :
-            neighbors = sum([ objects[i+l].depth for l in range(-3, 3) if l != 0 and 0<i+l<len(objects) ]) #6 voisins en 3d
-            print(objects[i].depth)
-            if neighbors>1:
-                obj.color="#FFFFFF"
-            elif obj.color=="#000000" and neighbors==3:
-                obj.color="#FFFFFF"
-            elif (obj.color=="#FFFFFF" and neighbors==3):
-                obj.color="#FFFFFF"
-            elif (obj.color=="#FFFFFF" and neighbors==2):
-                obj.color="#FFFFFF"
+            neighbors = sum([ objects[objIndex+l].life for l in range(-3, 3) if l != 0 and 0<objIndex+l<len(objects) ]) #6 voisins en 3d
+            #print(objects[i].depth)
+            if neighbors==4 or neighbors==0 :
+                obj.life=1
+            elif neighbors>4:
+                obj.life=0
+            elif (obj.life==1 and neighbors==3):
+                obj.life=1
+            elif (obj.life==1 and neighbors==2):
+                obj.life=1
             else:
-                obj.color="#000000"
+                obj.life=0
+
         
             obj_faces=[]
             for face in obj.faces:
@@ -210,30 +211,22 @@ while True:
                     x,z = rotate2D((x,z),cam.rot[1]) #x et z modifies par la rotation autour de y
                     y,z = rotate2D((y,z),cam.rot[0]) #y et z modifies par la rotation autour de x
 
-                    if not z>0:
-                        face_points = None
-                        break
+
                     f=SWidth/z #coefficient de stereoscopie
                     X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D ; +SWidth et SHeight car le repere xyz est placé au milieu de l'ecran
 
-                    if not -50<X<WIDTH+50 or not -50<Y<HEIGHT+50 : #peut etre ajuste pour les performances
-                        #on affiche pas ce qui est hors champ
-                        face_points=None
-                        break
-
                     face_points.append((X, Y)) #position en pixels des sommets sur l'image 2D
                     depth += (x**2)+(y**2)+(z**2) #se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
-                if face_points is not None:
-                #si il y a au moins 2 points à connecter
-                    face_points.extend( (obj.color, depth) )
+
+                face_points.extend( (obj.life, depth) )
                     #face_points[4] est dedié à la couleur, cela permet une meilleure optimisation (20fps au lieu de 10!)
                     #face_point[5] dedié à la profondeur
-                
-                    obj_faces.append(face_points)
+                obj_faces.append(face_points)
 
             obj_faces.sort(key=lambda x: x[-1], reverse=True)
             for face in obj_faces[-3:]: #on ne dessine que les 3 faces maximum visibles simultanément
-                canvas.create_polygon(face[:-2], fill=face[-2], outline="black", tag="face")
+                #print(face[-2], colors())
+                canvas.create_polygon(face[:-2], fill=colors[face[-2]], outline="black", tag="face")
 
 
     root.update()
