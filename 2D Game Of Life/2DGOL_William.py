@@ -28,17 +28,22 @@ def display():
     for row in range(len(board)):
         for column in range(len(board[0])):
 
+            #Cas d'une case morte
+            if board[row][column] == 0:
+                canvas.create_rectangle(x, y, x+casePix, y+casePix, fill="white", tag="cell")
+
+
             #Cas d'une case vivante
             if board[row][column] == 1:
-                canvas.create_rectangle(x, y, x+c, y+c,fill="black", tag="cell")
+                canvas.create_rectangle(x, y, x+casePix, y+casePix, fill="black", tag="cell")
             #on passe a la cellule suivante
-            x += c
+            x += casePix
             #Retour à la ligne
-            if x >= 20*c:
+            if x >= 20*casePix:
                 x = 0
-        y += c
+        y += casePix
     window.update()
-    time.sleep(0.1)
+    time.sleep(0.05)
     canvas.delete("cell")
 
 
@@ -78,18 +83,37 @@ def stop():
     global keepgoing
     keepgoing = False
 
+def changeColor(event):
+    "Changer la couleur de la case cliquée"
+    coordX = str(event.x)
+    coordY = str(event.y)
+    coordVar.set("Coordonnées : " + coordX + " ; " + coordY)
+    
+
 
 #####------FENETRE PRINCIPALE-----#####
 
 if __name__ == "__main__":
-    c = 20
+
+    #Nombre de pixels d'une case
+    casePix = 30
+
     keepgoing=True
     window = Tk()
     window.title("Test jeu de la vie William")
 
     #Le tableau généré aléatoirement
-    canvas = Canvas(window, width=c*20, height=c*20, bg="white")
+    canvas = Canvas(window, width=casePix*20, height=casePix*20, bg="white")
     canvas.grid(column=1, row=1, padx=10, pady=10, rowspan=10)
+    
+    #Localisation de clics dans le canvas
+    canvas.bind("<Button-1>", changeColor)
+
+    #Affichage des coordonnées de la souris
+    coordVar = StringVar()
+    coordVar.set("Coordonnées")
+    coordDisp = Label(window, textvariable=coordVar)
+    coordDisp.grid(column=2, row=4, padx=10, pady=10)
 
 
     #Bouton pour faire deux étapes
@@ -97,7 +121,7 @@ if __name__ == "__main__":
     infButton.grid(column=2, row=2, padx=10, pady=10)
 
     stopButton = Button(window, text="Stop", command=stop)
-    stopButton.grid(column=3, row=2, padx=10, pady=10)
+    stopButton.grid(column=2, row=3, padx=10, pady=10)
 
     #Activation du gestionnaire d'évènement de la fenêtre
     window.mainloop()
