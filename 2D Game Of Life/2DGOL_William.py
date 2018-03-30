@@ -20,7 +20,8 @@ import time
 
 def display():
     "Affiche un tableau dans le canvas à partir de la liste"
-    
+    global board
+    canvas.delete("cell")
     x, y = 0, 0
     #Parcours du tableau de long en large
     for row in range(len(board)):
@@ -30,11 +31,11 @@ def display():
             if board[row][column] == 0:
                 canvas.create_rectangle(x, y, x+cPix, y+cPix, fill="white", tag="cell")
 
-
             #Cas d'une case vivante
             if board[row][column] == 1:
                 canvas.create_rectangle(x, y, x+cPix, y+cPix, fill="black", tag="cell")
-            #on passe a la cellule suivante
+                
+            #On passe a la cellule suivante
             x += cPix
             #Retour à la ligne
             if x >= caseNumber*cPix:
@@ -43,17 +44,20 @@ def display():
     #Affichage final
     window.update()
     time.sleep(0.05)
-    canvas.delete("cell")
+    
 
 
 
 def neighborsFinding():
     "Chercher voisins + calculer couleur nouvelle case"
-    
-    global keepgoing
+    global keepgoing, board
     keepgoing = True
+
+    
+
     while keepgoing:
         #Parcours du tableau de long en large
+        board_new=board
         for x in range(len(board)):
             for y in range(len(board[0])):
 
@@ -62,28 +66,31 @@ def neighborsFinding():
                 #Parcours des voisins dans un rayon de 1, soit 3x3 cases
                 for i in range(-1, 2): #Test des voisins par ligne.
                     for j in range(-1, 2): #Test voisins dans cases dans les lignes
-                        neighbors+=board[(x+i+len(board))%len(board)][(y+j+len(board[0]))%len(board[0])]
+                        neighbors+=board[(x+i+caseNumber)%caseNumber][(y+j+caseNumber)%caseNumber]
 
                 #Retrait de la cellule étudiée (pas voisine)
                 neighbors -= board[x][y]
 
+                if neighbors!=0 : print(str(neighbors))
                 #Application des règles du jeu de la vie
-                if board[x][y]==0 and neighbors==3:
-                    board[x][y] = 1
-                elif (board[x][y]==1 and neighbors==3):
-                    board[x][y] = 1
-                elif (board[x][y]==1 and neighbors==2):
-                    board[x][y] = 1
+                if board[x][y]==1 and neighbors<2:
+                    board_new[x][y] = 0
+                elif board[x][y]==1 and neighbors>3:
+                    board_new[x][y] = 0
+                elif board[x][y] == 0 and neighbors==3:
+                    board_new[x][y] = 1
                 else:
-                    board[x][y] = 0
-        #Après le calcul de toutes les nouvelles couleurs, affichage.
+                    board_new[x][y] = board[x][y]
+                
+        #Mise à jour de l'ancien tableau
+        board=board_new
+        #Affichage
         display()
 
 
 
 def stop():
     "Arrête le programme grâce à un interrupteur"
-    
     global keepgoing
     keepgoing = False
 
@@ -91,15 +98,14 @@ def stop():
 
 def changeColor(event):
     "Change la couleur de la case cliquée"
-
     global board
+  
+    coordX = event.y
+    coordY = event.x
+    canvCoords.set("Coordonnées : " + str(coordX) + " ; " + str(coordY))
     
-    coordX = str(event.x)
-    coordY = str(event.y)
-    canvCoords.set("Coordonnées : " + coordX + " ; " + coordY)
-    
-    boardX = int(coordX)//caseNumber
-    boardY = int(coordY)//caseNumber
+    boardX = coordX//caseNumber
+    boardY = coordY//caseNumber
     boardCoords.set("Dans le tableau : " + str(boardX) + " ; " + str(boardY))
 
     if board[boardX][boardY]==0:
@@ -107,11 +113,12 @@ def changeColor(event):
         
     elif board[boardX][boardY]==1:
         board[boardX][boardY] = 0
+
+    display()
         
-
     
     
-
+        
 
 #####------FENETRE PRINCIPALE-----#####
 
@@ -119,14 +126,12 @@ if __name__ == "__main__":
 
     #-- INITIALISATION DES VARIABLES --#
     
-    cPix = 25 #Nombre de pixels d'une case
-    caseNumber = 25 #Nombre de cases
+    cPix = 30 #Nombre de pixels d'une case
+    caseNumber = 30 #Nombre de cases
     keepgoing=True #Interrupteur
     window = Tk()
     window.title("Le Jeu de La Vie")
-    board = [[randint(0, 1) for i in range(caseNumber)] for j in range(caseNumber)] #Tableau 
-
-
+    board = [[0 for i in range(caseNumber)] for j in range(caseNumber)] #Tableau
 
 
     #-- TALBEAU --#
