@@ -21,6 +21,7 @@ import time
 def display():
     "Affiche un tableau dans le canvas à partir de la liste"
     global board
+
     canvas.delete("cell")
     x, y = 0, 0
     #Parcours du tableau de long en large
@@ -34,7 +35,7 @@ def display():
             #Cas d'une case vivante
             if board[row][column] == 1:
                 canvas.create_rectangle(x, y, x+cPix, y+cPix, fill="black", tag="cell")
-                
+
             #On passe a la cellule suivante
             x += cPix
             #Retour à la ligne
@@ -42,9 +43,8 @@ def display():
                 x = 0
         y += cPix
     #Affichage final
-    window.update()
+    root.update()
     time.sleep(0.05)
-    
 
 
 
@@ -52,8 +52,6 @@ def neighborsFinding():
     "Chercher voisins + calculer couleur nouvelle case"
     global keepgoing, board
     keepgoing = True
-
-    
 
     while keepgoing:
         #Parcours du tableau de long en large
@@ -81,7 +79,7 @@ def neighborsFinding():
                     board_new[x][y] = 1
                 else:
                     board_new[x][y] = board[x][y]
-                
+
         #Mise à jour de l'ancien tableau
         board=board_new
         #Affichage
@@ -99,65 +97,78 @@ def stop():
 def changeColor(event):
     "Change la couleur de la case cliquée"
     global board
-  
+
     coordX = event.y
     coordY = event.x
     canvCoords.set("Coordonnées : " + str(coordX) + " ; " + str(coordY))
-    
+
     boardX = coordX//caseNumber
     boardY = coordY//caseNumber
     boardCoords.set("Dans le tableau : " + str(boardX) + " ; " + str(boardY))
 
     if board[boardX][boardY]==0:
         board[boardX][boardY] = 1
-        
+
     elif board[boardX][boardY]==1:
         board[boardX][boardY] = 0
 
     display()
-        
-    
-    
-        
+
+
+
+
 
 #####------FENETRE PRINCIPALE-----#####
 
 if __name__ == "__main__":
 
-    #-- INITIALISATION DES VARIABLES --#
-    
+    ###-- INITIALISATION DES VARIABLES --####
     cPix = 30 #Nombre de pixels d'une case
     caseNumber = 30 #Nombre de cases
     keepgoing=True #Interrupteur
-    window = Tk()
-    window.title("Le Jeu de La Vie")
+    root = Tk()
+    root.title("Le Jeu de La Vie")
     board = [[0 for i in range(caseNumber)] for j in range(caseNumber)] #Tableau
 
 
-    #-- TALBEAU --#
-    
-    canvas = Canvas(window, width=cPix*caseNumber, height=cPix*caseNumber, bg="white")
-    canvas.grid(column=1, row=1, padx=5, pady=5, rowspan=10)
+
+    ###-- TALBEAU --###
+    canvas = Canvas(root, width=cPix*caseNumber, height=cPix*caseNumber, bg="white")
+    canvas.grid(column=1, row=1, padx=5, pady=5,)
     canvas.bind("<Button-1>", changeColor) #Localisation des clics dans le canvas
 
-    canvCoords = StringVar() #Coordonnées dans le canvas
+
+
+    ###-- INTERFACE INTERACTIONS UTILISATEUR/PROGRAMME --###
+    userPart = LabelFrame(root, bd=2, text="Utilisateur")
+    userPart.grid(column=2, row=1, padx=5, pady=5, sticky=N)
+
+    #Bouton de lancement
+    launchButton = Button(userPart, text="Lancer la simulation", command=neighborsFinding)
+    launchButton.grid(column=1, row=1, padx=7, pady=5)
+
+    #Bouton de stop
+    stopButton = Button(userPart, text="Stopper la simulation", command=stop)
+    stopButton.grid(column=1, row=2, padx=7, pady=5)
+
+
+    ###-- INTERFACE DÉVELOPPEMENT --###
+    devPart = LabelFrame(root, bd=2, text="Développeur")
+    devPart.grid(column=2, row=1, padx=5, pady=5, sticky=S)
+
+    #Coordonnées dans le canvas
+    canvCoords = StringVar()
     canvCoords.set("Coordonnées :")
-    cDisp1 = Label(window, textvariable=canvCoords)
-    cDisp1.grid(column=2, row=4, padx=5, pady=5)
+    cDisp1 = Label(devPart, textvariable=canvCoords)
+    cDisp1.grid(column=1, row=1, padx=7, pady=5)
 
-    boardCoords = StringVar() #Coordonnées dans le tableau
+    #Coordonnées dans le tableau
+    boardCoords = StringVar()
     boardCoords.set("Dans le tableau :")
-    cDisp2 = Label(window, textvariable=boardCoords)
-    cDisp2.grid(column=2, row=5, padx=5, pady=5)
+    cDisp2 = Label(devPart, textvariable=boardCoords)
+    cDisp2.grid(column=1, row=2, padx=7, pady=5)
 
 
-    #-- BOUTONS UTILES --#
-    
-    infButton = Button(window, text="Lancer", command=neighborsFinding)
-    infButton.grid(column=2, row=2, padx=10, pady=10)
-
-    stopButton = Button(window, text="Stop", command=stop)
-    stopButton.grid(column=2, row=3, padx=10, pady=10)
 
     #Activation du gestionnaire d'évènement de la fenêtre
-    window.mainloop()
+    root.mainloop()
