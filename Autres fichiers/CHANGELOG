@@ -2,8 +2,12 @@
 convention Python
 
 30/03 -> [2D] Code changé avec le système de board et board_new pour ne pas 
-impacter les nombres de voisins par étapes (Avant : on calcule les voisins d'une
-case, on change la case. Après : on calcule les voisins de la case, on stocke le
-changement, on calcule les voisins de la case suivante, et on restock, et à la 
-fin on remet tout d'un coup, donc plus d'impact et les règles sont CENSÉES être
-respectées).
+impacter les nombres de voisins par étapes, en effet avant on impactait les 
+voisins de la case suivante parce qu'on changeait directement la case après
+avoir calculé les voisins, et donc lors du calcul des voisins de la case 
+suivante, on avait un voisin qui était déjà changé. Cela ne respectait donc pas 
+les règles de la vie.
+
+31/03 -> [2D] Variable "window" renommée en "root" pour éviter des confusions et 
+s'adapter aux conventions. Interface graphique et organisation du code un peu 
+refaite.
