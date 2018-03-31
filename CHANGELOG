@@ -1,9 +1,0 @@
-19/03 -> [2D] Code réécrit pour qu'il s'arrête au caractère 80 comme dans la 
-convention Python
-
-30/03 -> [2D] Code changé avec le système de board et board_new pour ne pas 
-impacter les nombres de voisins par étapes (Avant : on calcule les voisins d'une
-case, on change la case. Après : on calcule les voisins de la case, on stocke le
-changement, on calcule les voisins de la case suivante, et on restock, et à la 
-fin on remet tout d'un coup, donc plus d'impact et les règles sont CENSÉES être
-respectées).
