@@ -9,7 +9,7 @@ WIDTH = 1000
 HEIGHT = 1000
 SWidth, SHeight = WIDTH//2, HEIGHT//2 #semi width and semi height
 
-colors  = ("#000000", "#FFFFFF", "#6D8572", "#FAE705", "#343A83", "#00FF00", "#FFB400", "#AD009E")
+colors  = ("#000000", "#FFFFFF", "#6D8572", "#FAE705", "#343A83", "#00FF00", "#FFB400", "#AD009E", "#ADF097")
 pressedkeys=[]
 
 class Camera:
@@ -89,7 +89,7 @@ def movement():
                 f=SWidth/z #coefficient de stereoscopie 
                 X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
 
-                if X<WIDTH+SWidth and Y<HEIGHT+SHeight and X>-SWidth and Y>-SHeight: #peu d'impact sur framerate
+                if X<WIDTH and Y<HEIGHT and X>0 and Y>0: #peu d'impact sur framerate
                     obj.depth = (x**2)+(y**2)+(z**2)
                     #print(obj.depth, obj.color, "pos :", x,y,z)
                     obj.show = True
@@ -106,6 +106,31 @@ def rotate2D(pos, rotation):
     return pos[0]*cos-pos[1]*sin, pos[1]*cos+pos[0]*sin
 
 
+def gameOfLife(objects, objNb):
+    while(1):
+        time.sleep(0.1)
+
+        for x in range(len(objects)):
+            for y in range(len(objects[x])):
+                for z in range(len(objects[x][y])):
+
+                    """
+                    A cyclic cellular automaton is defined as an automaton where each cell takes one of N states 0 , 1 , 2 , ...N − 1 and a cell in state i changes to state i + 1 mod N at  the  next  time  step  if  it  has  a  neighbor  that  is  in  statei + 1 mod N, otherwise it remains in state i at the next time step.
+                    """
+##                    nextState = (objects[x][y][z].life+1)%4
+                    r1, r2, r3, r4 = 1, 7, 9, 15
+                    life_sum = 0
+                    for i in range(-1, 2):
+                        for j in range(-1,2):    
+                            for k in range(-1, 2):
+                                if not (i==0 and j==0 and k==0):
+                                    life_sum += objects [(x+i)%len(objects)] [(y+j)%len(objects[x])] [(z+k)%len(objects[x][y])] .life
+##                                    if objects [(x+i)%len(objects)] [(y+j)%len(objects[x])] [(z+k)%len(objects[x][y])] .life == nextState:
+##                                        objects[x][y][z].life = nextState
+##                                        nextState = (objects[x][y][z].life+1)%4
+
+                    objects[x][y][z].life = (life_sum*2)%9
+
 class Object:
     ''' Classe représentant tous les objets '''
     depth=0
@@ -116,7 +141,7 @@ class Object:
         self.pos = position
         #on calcule les coordonnees de chaque arrete du cube en fonction de ses dimensions et sa position dans l'espace
         # X,Y,Z = un point de l'objet
-        self.vertices = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.vertices]
+        self.vertices = [(x+X, y+Y, z+Z) for X,Y,Z in self.vertices]
         #jsp pas pq faut diviser par 2 mais ça fonctionne mieux <- ça change juste les dimensions des objets
         self.life=life
 
@@ -164,15 +189,15 @@ canvas.create_image(SWidth, SHeight, image=tkimg) #SWidth et SHeight servent a m
 cam = Camera((0,0,-6))
 
 #Création des objets à afficher
-objects = [] 
+objects_3D = [] 
 #objects.extend([ FloorPannel((x,0,z),"white") for z in range(-5,5) for x in range(-5,5) ])
-objects.extend([ Cube((x,y,z), random.choice([0,1])) for y in range(0,-6,-2) for z in range(0,20,2) for x in range(0,20,2)  ])
-#objects.extend( [Cube((0,0,0),"red"),Cube((2,0,0), "blue"), Cube((-2,0,0), "yellow")])
-#objects.extend([ Cube((x,y,0), random.choice([0,1])) for y in range(0,20,2) for x in range(0,20,2) ])
+objects_3D.extend([ [[Cube((x,y,z), random.choice([0,1,2,3,4])) for x in range(0,-20,-4)] for y in range(0,20,4)] for z in range(0,20,4)  ]) #liste 3D pour le jeu de la vie
+objects = [obj for dimension1 in objects_3D for dimension2 in dimension1 for obj in dimension2] # liste 2D pour le rendu 3d
 
 
 i,frameRate=0,0
 _thread.start_new_thread(movement, ( )) #les déplacements sont calculés dans un autre thread
+_thread.start_new_thread(gameOfLife, (objects_3D, len(objects) ))
 while True:
     t0 = time.time()
 
@@ -180,23 +205,9 @@ while True:
     face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), tuple(couleur), int(profondeur) ], [ (x,y),...], ...]
     
     #on calcule comment dessiner chaque cube
-    for objIndex in range(len(objects)) :
-        obj = objects[objIndex]
-        if obj.show :
-            neighbors = sum([ objects[objIndex+l].life for l in range(-3, 3) if l != 0 and 0<objIndex+l<len(objects) ]) #6 voisins en 3d
-            #print(objects[i].depth)
-            if neighbors==4 or neighbors==0 :
-                obj.life=1
-            elif neighbors>4:
-                obj.life=0
-            elif (obj.life==1 and neighbors==3):
-                obj.life=1
-            elif (obj.life==1 and neighbors==2):
-                obj.life=1
-            else:
-                obj.life=0
+    for obj in objects :
+        if obj.show and obj.life>0 :
 
-        
             obj_faces=[]
             for face in obj.faces:
                 
@@ -218,7 +229,7 @@ while True:
                     face_points.append((X, Y)) #position en pixels des sommets sur l'image 2D
                     depth += (x**2)+(y**2)+(z**2) #se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
 
-                face_points.extend( (obj.life, depth) )
+                face_points.extend( (depth, ) )
                     #face_points[4] est dedié à la couleur, cela permet une meilleure optimisation (20fps au lieu de 10!)
                     #face_point[5] dedié à la profondeur
                 obj_faces.append(face_points)
@@ -226,7 +237,7 @@ while True:
             obj_faces.sort(key=lambda x: x[-1], reverse=True)
             for face in obj_faces[-3:]: #on ne dessine que les 3 faces maximum visibles simultanément
                 #print(face[-2], colors())
-                canvas.create_polygon(face[:-2], fill=colors[face[-2]], outline="black", tag="face")
+                canvas.create_polygon(face[:-1], fill=colors[obj.life], outline="black", tag="face")
 
 
     root.update()
