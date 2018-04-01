@@ -56,29 +56,30 @@ def neighborsFinding():
     while keepgoing:
         #Parcours du tableau de long en large
         board_new=board
-        for x in range(len(board)):
-            for y in range(len(board[0])):
+        for y in range(len(board)):
+            for x in range(len(board[0])):
 
                 neighbors = 0 #On initialise à 0 voisins
 
                 #Parcours des voisins dans un rayon de 1, soit 3x3 cases
                 for i in range(-1, 2): #Test des voisins par ligne.
                     for j in range(-1, 2): #Test voisins dans cases dans les lignes
-                        neighbors+=board[(x+i+caseNumber)%caseNumber][(y+j+caseNumber)%caseNumber]
+                        neighbors+=board[(y+i+caseNumber)%caseNumber][(x+j+caseNumber)%caseNumber]
 
                 #Retrait de la cellule étudiée (pas voisine)
-                neighbors -= board[x][y]
+                neighbors -= board[y][x]
 
                 if neighbors!=0 : print(str(neighbors))
                 #Application des règles du jeu de la vie
-                if board[x][y]==1 and neighbors<2:
-                    board_new[x][y] = 0
-                elif board[x][y]==1 and neighbors>3:
-                    board_new[x][y] = 0
-                elif board[x][y] == 0 and neighbors==3:
-                    board_new[x][y] = 1
+                if board[y][x]==1 and neighbors<2:
+                    board_new[y][x] = 0
+                elif board[y][x]==1 and neighbors>3:
+                    board_new[y][x] = 0
+                elif board[y][x] == 0 and neighbors==3:
+                    board_new[y][x] = 1
                 else:
-                    board_new[x][y] = board[x][y]
+                    board_new[y][x] = board[y][x]
+
 
         #Mise à jour de l'ancien tableau
         board=board_new
@@ -100,21 +101,20 @@ def stop():
 
 def changeColor(event):
     "Change la couleur de la case cliquée"
-    global board
 
-    coordX = event.y
-    coordY = event.x
+    coordX = event.x
+    coordY = event.y
     canvCoords.set("Coordonnées : " + str(coordX) + " ; " + str(coordY))
 
     boardX = coordX//caseNumber
     boardY = coordY//caseNumber
     boardCoords.set("Dans le tableau : " + str(boardX) + " ; " + str(boardY))
 
-    if board[boardX][boardY]==0:
-        board[boardX][boardY] = 1
+    if board[boardY][boardX]==0:
+        board[boardY][boardX] = 1
+    elif board[boardY][boardX]==1:
+        board[boardY][boardX] = 0
 
-    elif board[boardX][boardY]==1:
-        board[boardX][boardY] = 0
     display()
 
 
@@ -125,8 +125,6 @@ def clearAll():
     step = 0
     board = [[0 for i in range(caseNumber)] for j in range(caseNumber)]
     display()
-
-
 
 
 
