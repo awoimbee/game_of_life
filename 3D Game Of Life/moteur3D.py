@@ -117,8 +117,7 @@ def gameOfLife(objects, objNb):
                     """
                     A cyclic cellular automaton is defined as an automaton where each cell takes one of N states 0 , 1 , 2 , ...N − 1 and a cell in state i changes to state i + 1 mod N at  the  next  time  step  if  it  has  a  neighbor  that  is  in  statei + 1 mod N, otherwise it remains in state i at the next time step.
                     """
-##                    nextState = (objects[x][y][z].life+1)%4
-                    r1, r2, r3, r4 = 1, 7, 9, 15
+##                   nextState = (objects[x][y][z].life+1)%4
                     life_sum = 0
                     for i in range(-1, 2):
                         for j in range(-1,2):    
@@ -177,7 +176,7 @@ frame.pack()
 
 ##Fond d'ecran
 current_file_dir = os.path.dirname(__file__)
-img_path = os.path.join(current_file_dir, "./files/Synthwave-Neon-80s-Background-4K.jpg")
+img_path = os.path.join(current_file_dir, "./background.jpg")
 img = Image.open(img_path)
 x, y = int(HEIGHT*(16/9)), HEIGHT
 img = img.resize((x,y))
