@@ -54,7 +54,6 @@ def neighborsFinding():
     keepgoing = True
 
     while keepgoing:
-        #Parcours du tableau de long en large
         board_new=board
         for y in range(len(board)):
             for x in range(len(board[0])):
@@ -71,15 +70,16 @@ def neighborsFinding():
 
                 if neighbors!=0 : print(str(neighbors))
                 #Application des règles du jeu de la vie
-                if board[y][x]==1 and neighbors<2:
-                    board_new[y][x] = 0
-                elif board[y][x]==1 and neighbors>3:
-                    board_new[y][x] = 0
-                elif board[y][x] == 0 and neighbors==3:
-                    board_new[y][x] = 1
-                else:
-                    board_new[y][x] = board[y][x]
-
+                if board[y][x]==0:
+                    if neighbors==3:
+                        board_new[y][x]=1
+                if board[y][x]==1:
+                    if neighbors > 3:
+                        board_new[y][x]=0
+                    elif neighbors==2 or neighbors==3:
+                        board_new[y][x]=1
+                    elif neighbors < 2:
+                        board_new[y][x]=0
 
         #Mise à jour de l'ancien tableau
         board=board_new
