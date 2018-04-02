@@ -11,3 +11,7 @@ les règles de la vie.
 31/03 -> [2D] Variable "window" renommée en "root" pour éviter des confusions et 
 s'adapter aux conventions. Interface graphique et organisation du code un peu 
 refaite.
+
+02/04 -> [2D] Le bug des règles non-respectées a enfin été résolu. Le problème
+étant que la copie du tableau se faisait mal, un module s'en occupe maintenant
+(le module "copy").
