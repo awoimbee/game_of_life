@@ -16,6 +16,7 @@ from tkinter import *
 from random import randint
 import time
 import threading
+import copy
 
 
 def display():
@@ -54,7 +55,7 @@ def neighborsFinding():
     keepgoing = True
 
     while keepgoing:
-        board_new=board
+        board_new= copy.deepcopy(board)
         for y in range(len(board)):
             for x in range(len(board[0])):
 
