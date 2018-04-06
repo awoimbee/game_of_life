@@ -1,3 +1,5 @@
+#Document qui me servira pour rédiger ma synthèse personnelle
+
 19/03 -> [2D] Code réécrit pour qu'il s'arrête au caractère 80 comme dans la 
 convention Python
 
@@ -15,3 +17,6 @@ refaite.
 02/04 -> [2D] Le bug des règles non-respectées a enfin été résolu. Le problème
 étant que la copie du tableau se faisait mal, un module s'en occupe maintenant
 (le module "copy").
+
+06/04 -> [2D] Le code a été clarifié, les variables ont été réassignées à leur 
+bon rôle. Les règles du jeu de la vie ont été un peu abrégées/clarifiées.
