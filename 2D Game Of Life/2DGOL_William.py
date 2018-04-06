@@ -1,30 +1,25 @@
 ###########################################################################################################
-# Maillet William - Test du jeu de la vie, code expérimental                                              #
+# Maillet William - Test du jeu de la vie                                                                 #
 ###########################################################################################################
-# Prérequis à savoir avant de lire le code, afin de le comprendre :                                       #
-#                                                                                                         #
-# On considère que chaque cellule possède une valeur : 1 ou 0. Si elle possède la valeur 1, elle est      #
-# vivante, si elle possède la valeur 0 elle est morte/n'existe pas. Le principe appliqué est de           #
-# construire un tableau en '2D' avec des listes, et on a deux fonctions qui s'occupent de mettre en place #
-# tout le fonctionnement du progamme. La première fonction s'occupe d'afficher le tableau d'après les     #
-# valeurs qu'il contient, et la seconde fonction a pour but d'appliquer les règles du jeu de la vie       #
-#                                                                                                         #
-###########################################################################################################
+
 
 #Importation de divers modules utiles
 from tkinter import *
 from random import randint
 import time
-import threading
 import copy
 
 
 def display():
     "Affiche un tableau dans le canvas à partir de la liste"
     global board
-
+    
+    #Effacer toute les cellules
     canvas.delete("cell")
+
+    #Coordonnées dans le canvas qui servent à placer les carrés
     x, y = 0, 0
+    
     #Parcours du tableau de long en large
     for row in range(len(board)):
         for column in range(len(board[0])):
@@ -39,54 +34,67 @@ def display():
 
             #On passe a la cellule suivante
             x += cPix
+            
             #Retour à la ligne
             if x >= caseNumber*cPix:
                 x = 0
+                
         y += cPix
+        
     #Affichage final
     root.update()
-    time.sleep(0.05)
+
 
 
 
 def neighborsFinding():
     "Chercher voisins + calculer couleur nouvelle case"
-    global keepgoing, board, step
+    global keepgoing, step, board
+
+    #Démarrage du processus
     keepgoing = True
 
+    #Calcul des voisins
     while keepgoing:
-        board_new= copy.deepcopy(board)
-        for y in range(len(board)):
-            for x in range(len(board[0])):
 
-                neighbors = 0 #On initialise à 0 voisins
+        #Copie intégrale du tableau
+        board_new= copy.deepcopy(board)
+
+        #Parcours du tableau de long en large
+        for row in range(len(board)):
+            for column in range(len(board[0])):
+
+                #Voisins initialisés à 0
+                neighbors = 0
 
                 #Parcours des voisins dans un rayon de 1, soit 3x3 cases
-                for i in range(-1, 2): #Test des voisins par ligne.
-                    for j in range(-1, 2): #Test voisins dans cases dans les lignes
-                        neighbors+=board[(y+i+caseNumber)%caseNumber][(x+j+caseNumber)%caseNumber]
+                for i in range(-1, 2):
+                    for j in range(-1, 2):
+                        #Ajout de la valeur de la case à "neighbors"
+                        neighbors+=board[(row+i+caseNumber)%caseNumber][(column+j+caseNumber)%caseNumber]
 
                 #Retrait de la cellule étudiée (pas voisine)
-                neighbors -= board[y][x]
+                neighbors -= board[row][column]
 
-                if neighbors!=0 : print(str(neighbors))
                 #Application des règles du jeu de la vie
-                if board[y][x]==0:
-                    if neighbors==3:
-                        board_new[y][x]=1
-                if board[y][x]==1:
-                    if neighbors > 3:
-                        board_new[y][x]=0
-                    elif neighbors==2 or neighbors==3:
-                        board_new[y][x]=1
-                    elif neighbors < 2:
-                        board_new[y][x]=0
+                if board[row][column]==1 and (neighbors<2 or neighbors >3):
+                    board_new[row][column] = 0    #Mort car pas assez de cellules voisines
+                    
+                elif board[row][column]==1 and (neighbors==2 or neighbors==3):
+                    board_new[row][column] = 1    #Vie qui continue
+
+                elif board[row][column]==0 and neighbors==3:
+                    board_new[row][column] = 1    #Naissance car 3 cellules voisines
+
+                
 
         #Mise à jour de l'ancien tableau
         board=board_new
+        
         #Mise à jour de l'étape et de l'état
         step += 1
         state.set("En cours" + " (étape "+ str(step) + ")")
+        
         #Affichage
         display()
 
@@ -95,6 +103,8 @@ def neighborsFinding():
 def stop():
     "Arrête le programme grâce à un interrupteur"
     global keepgoing, step
+
+    #On arrête le processus de calcul des voisins
     keepgoing = False
     state.set("Arrêtée" + " (étape "+ str(step) + ")")
 
@@ -103,19 +113,22 @@ def stop():
 def changeColor(event):
     "Change la couleur de la case cliquée"
 
-    coordX = event.x
-    coordY = event.y
-    canvCoords.set("Coordonnées : " + str(coordX) + " ; " + str(coordY))
+    #Affichage des coordonnées dans le canvas
+    canvCoords.set("Coordonnées : " + str(event.x) + " ; " + str(event.y))
+    
+    #Calcul et affichage des coordonnées dans la case dans le tableau
+    boardColumn = event.x//caseNumber
+    boardRow = event.y//caseNumber
+    boardCoords.set("Dans le tableau : " + str(boardColumn) + " ; " + str(boardRow))
 
-    boardX = coordX//caseNumber
-    boardY = coordY//caseNumber
-    boardCoords.set("Dans le tableau : " + str(boardX) + " ; " + str(boardY))
+    #Si on clique sur une case blanche, elle devient noire
+    if board[boardRow][boardColumn]==0:
+        board[boardRow][boardColumn] = 1
+    #Si on clique sur une case noire, elle devient blanche
+    elif board[boardRow][boardColumn]==1:
+        board[boardRow][boardColumn] = 0
 
-    if board[boardY][boardX]==0:
-        board[boardY][boardX] = 1
-    elif board[boardY][boardX]==1:
-        board[boardY][boardX] = 0
-
+    #Affichage
     display()
 
 
@@ -123,8 +136,12 @@ def changeColor(event):
 def clearAll():
     "Efface toute les cellules"
     global board, step
+
+    #Ré-initialisation des étapes
     step = 0
     board = [[0 for i in range(caseNumber)] for j in range(caseNumber)]
+
+    #Affichage
     display()
 
 
@@ -134,17 +151,20 @@ def clearAll():
 if __name__ == "__main__":
 
     ###-- INITIALISATION DES VARIABLES --####
-    cPix = 30 #Nombre de pixels d'une case
-    caseNumber = 30 #Nombre de cases
-    keepgoing=True #Interrupteur
-    step = 0 #Étape
+    cPix = 30   #Nombre de pixels d'une case
+    caseNumber = 30     #Nombre de cases
+    keepgoing=True      #Interrupteur
+    step = 0            #Étapes
+
+    #Initialisation de la fenêtre
     root = Tk()
     root.title("Le Jeu de La Vie")
-    board = [[0 for i in range(caseNumber)] for j in range(caseNumber)] #Tableau
+    #Initialisation du tableau
+    board = [[0 for i in range(caseNumber)] for j in range(caseNumber)]
 
 
 
-    ###-- TALBEAU --###
+    ###-- TABlEAU --###
     canvas = Canvas(root, width=cPix*caseNumber, height=cPix*caseNumber, bg="white")
     canvas.grid(column=1, row=1, padx=5, pady=5, rowspan=3)
     canvas.bind("<Button-1>", changeColor) #Localisation des clics dans le canvas
@@ -189,8 +209,6 @@ if __name__ == "__main__":
     state.set("Arrêteée")
     stateDisplay = Label(statePart, textvariable=state)
     stateDisplay.grid(column=1, row=1, padx=7, pady=5)
-
-
 
 
 
