@@ -68,35 +68,6 @@ def movement():
                 cam.rot[0]-=sensRot
             elif key == 'Down':
                 cam.rot[0]+=sensRot
-        ##########################################################
-        # REVOVE NOT SHOWED OBJECTS
-        #mettre ça ici permet d'améliorer le framerate
-        #on calcule dans quel ordre dessiner chaque cube - *on retire ceux qui sont hors champ*
-        global objects
-        for obj in objects :
-            obj.show = False
-            #On calcule la position du centre de chaque objet pour determiner si il doit etre affiché et dans quel ordre il doit etre dessiné
-            x,y,z = obj.pos    
-            x-=cam.pos[0]
-            y-=cam.pos[1]
-            z-=cam.pos[2]
-
-            x,z = rotate2D((x,z),cam.rot[1]) #x et z modifies par la rotation autour de y
-            y,z = rotate2D((y,z),cam.rot[0]) #y et z modifies par la rotation autour de x
-
-            if z>0:
-                #si z=0 on a une division par 0 et si z<0 alors l'affichage est hors champ
-                f=SWidth/z #coefficient de stereoscopie 
-                X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
-
-                if X<WIDTH and Y<HEIGHT and X>0 and Y>0: #peu d'impact sur framerate
-                    obj.depth = (x**2)+(y**2)+(z**2)
-                    #print(obj.depth, obj.color, "pos :", x,y,z)
-                    obj.show = True
-
-        objects.sort(key=lambda x: x.depth, reverse=True) #on ordonne objects selon l'ordre de depth
-        ############################################################# impact *très minime* sur le framerate
-
 
 
 def rotate2D(pos, rotation):
@@ -190,7 +161,7 @@ cam = Camera((0,0,-6))
 #Création des objets à afficher
 objects_3D = [] 
 #objects.extend([ FloorPannel((x,0,z),"white") for z in range(-5,5) for x in range(-5,5) ])
-objects_3D.extend([ [[Cube((x,y,z), random.choice([0,1,2,3,4])) for x in range(0,-20,-4)] for y in range(0,20,4)] for z in range(0,20,4)  ]) #liste 3D pour le jeu de la vie
+objects_3D.extend([ [[Cube((x,y,z), random.choice([0,1,2,3,4])) for x in range(0,-40,-4)] for y in range(0,40,4)] for z in range(0,40,4)  ]) #liste 3D pour le jeu de la vie
 objects = [obj for dimension1 in objects_3D for dimension2 in dimension1 for obj in dimension2] # liste 2D pour le rendu 3d
 
 
@@ -200,13 +171,11 @@ _thread.start_new_thread(gameOfLife, (objects_3D, len(objects) ))
 while True:
     t0 = time.time()
 
-
     face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), tuple(couleur), int(profondeur) ], [ (x,y),...], ...]
-    
+
     #on calcule comment dessiner chaque cube
     for obj in objects :
-        if obj.show and obj.life>0 :
-
+        if obj.life>0 :
             obj_faces=[]
             for face in obj.faces:
                 
@@ -221,22 +190,31 @@ while True:
                     x,z = rotate2D((x,z),cam.rot[1]) #x et z modifies par la rotation autour de y
                     y,z = rotate2D((y,z),cam.rot[0]) #y et z modifies par la rotation autour de x
 
+                    if z<=0:
+                        face_points = None
+                        break
 
                     f=SWidth/z #coefficient de stereoscopie
                     X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D ; +SWidth et SHeight car le repere xyz est placé au milieu de l'ecran
 
+                    if not 0<X<WIDTH or not 0<Y<HEIGHT : #on affiche pas ce qui est hors champ
+                        face_points = None
+                        break
+
                     face_points.append((X, Y)) #position en pixels des sommets sur l'image 2D
                     depth += (x**2)+(y**2)+(z**2) #se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
 
-                face_points.extend( (depth, ) )
-                    #face_points[4] est dedié à la couleur, cela permet une meilleure optimisation (20fps au lieu de 10!)
-                    #face_point[5] dedié à la profondeur
+                if face_points is None:
+                    break
+                face_points.extend( (obj.life, depth) ) #face_points contient les coordonnees des points de la face, mais aussi la couleur et profondeur de la face
                 obj_faces.append(face_points)
 
             obj_faces.sort(key=lambda x: x[-1], reverse=True)
-            for face in obj_faces[-3:]: #on ne dessine que les 3 faces maximum visibles simultanément
-                #print(face[-2], colors())
-                canvas.create_polygon(face[:-1], fill=colors[obj.life], outline="black", tag="face")
+            face_list.extend(obj_faces[-3:]) #on ne dessine que les 3 faces maximum visibles simultanément
+
+    face_list.sort(key=lambda x: x[-1], reverse=True) 
+    for face in face_list:
+        canvas.create_polygon(face[:-2], fill=colors[face[-2]], outline="black", tag="face")
 
 
     root.update()
@@ -245,6 +223,6 @@ while True:
     frameRate += time.time()-t0
     i+=1
     if i > 50 :
-        print(1/((frameRate/i)+1e-10),"fps")
+        print(1/((frameRate/i)),"fps")
         i=0
         frameRate=0
