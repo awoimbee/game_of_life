@@ -104,7 +104,7 @@ def gameOfLife(objects, objNb):
 
 class Cube:
     #sommets du cube quand il est positionné sur l'origine des reperes x,y,z puis ses faces
-    vertices = (-1,1,-1),(1,1,-1),(1,-1,-1),(-1,-1,-1), (-1,1,1),(1,1,1),(1,-1,1),(-1,-1,1)
+    vertices = (-0.5,0.5,-0.5),(0.5,0.5,-0.5),(0.5,-0.5,-0.5),(-0.5,-0.5,-0.5), (-0.5,0.5,0.5),(0.5,0.5,0.5),(0.5,-0.5,0.5),(-0.5,-0.5,0.5)
     faces = (4,5,6,7),(0,3,7,4),(1,2,6,5),(3,2,6,7),(0,1,5,4),(0,1,2,3)
     depth=0
     
@@ -142,7 +142,7 @@ cam = Camera((0,0,-6))
 #Création des objets à afficher
 objects_3D = [] 
 #objects.extend([ FloorPannel((x,0,z),"white") for z in range(-5,5) for x in range(-5,5) ])
-objects_3D.extend([ [[Cube((x,y,z), random.choice([0,1,2,3,4])) for x in range(0,-40,-4)] for y in range(0,4,4)] for z in range(0,40,4)  ]) #liste 3D pour le jeu de la vie
+objects_3D.extend([ [[Cube((x,y,z), random.choice([0,1,2,3,4])) for x in range(0,-40,-2)] for y in range(0,8,2)] for z in range(0,40,2)  ]) #liste 3D pour le jeu de la vie
 objects = [obj for dimension1 in objects_3D for dimension2 in dimension1 for obj in dimension2] # liste 1D pour le rendu 3d
 
 
