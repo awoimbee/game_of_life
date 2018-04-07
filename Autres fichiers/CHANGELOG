@@ -20,3 +20,7 @@ refaite.
 
 06/04 -> [2D] Le code a été clarifié, les variables ont été réassignées à leur 
 bon rôle. Les règles du jeu de la vie ont été un peu abrégées/clarifiées.
+
+07/04 -> [2D] Le tableau peut être maintenant de n'importe quelle largeur et 
+hauteur, grâce aux variables "boardWidth", "boardHeight". La variable cPix devient
+caseSize, c'est plus explicite.
