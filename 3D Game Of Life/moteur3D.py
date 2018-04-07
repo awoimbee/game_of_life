@@ -106,12 +106,11 @@ class Cube:
     #sommets du cube quand il est positionné sur l'origine des reperes x,y,z puis ses faces
     vertices = (-0.5,0.5,-0.5),(0.5,0.5,-0.5),(0.5,-0.5,-0.5),(-0.5,-0.5,-0.5), (-0.5,0.5,0.5),(0.5,0.5,0.5),(0.5,-0.5,0.5),(-0.5,-0.5,0.5)
     faces = (4,5,6,7),(0,3,7,4),(1,2,6,5),(3,2,6,7),(0,1,5,4),(0,1,2,3)
-    depth=0
+    life = int()
     
-    def __init__(self, objPos=(0,0,0), life=0):
-        self.pos = objPos
+    def __init__(self, pos=(0,0,0), life=0):
         #on calcule les coordonnees de chaque point du cube en fonction de sa position à l'origine et de la position de l'objet dans l'espace
-        self.vertices = [(objPos[0]+X, objPos[1]+Y, objPos[2]+Z) for X,Y,Z in self.vertices]
+        self.vertices = [(pos[0]+X, pos[1]+Y, pos[2]+Z) for X,Y,Z in self.vertices]
         self.life=life
 
 
@@ -148,11 +147,12 @@ objects = [obj for dimension1 in objects_3D for dimension2 in dimension1 for obj
 
 i,frameRate=0,0
 _thread.start_new_thread(movement, ( )) #les déplacements sont calculés dans un autre thread
-_thread.start_new_thread(gameOfLife, (objects_3D, len(objects) ))
+#_thread.start_new_thread(gameOfLife, (objects_3D, len(objects) ))
 while True:
+    """ Le rendu 3D est fait ici """
     t0 = time.time()
 
-    face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), tuple(couleur), int(profondeur) ], [ (x,y),...], ...]
+    face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), int(couleur), int(profondeur) ], [ (x,y),...], ...]
 
     #on calcule comment dessiner chaque cube
     for obj in objects :
@@ -186,17 +186,17 @@ while True:
                 depth += (x**2)+(y**2)+(z**2) #se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
 
             if face_points is None:
-                #on arrete decalculer les faces de l'objet
+                #on arrete de calculer les faces de l'objet
                 break
             face_points.extend( (obj.life, depth) ) #face_points contient les coordonnees des points de la face, mais aussi la couleur et profondeur de la face
             obj_faces.append(face_points)
 
         obj_faces.sort(key=lambda x: x[-1], reverse=True)
-        face_list.extend(obj_faces[-3:]) #[-3:] car on ne dessine que les 3 faces maximum visibles simultanément
+        face_list.extend(obj_faces[-3:]) #[-3:] car on ne dessine que les 3 faces maximum visibles simultanément de chaque cube
 
     face_list.sort(key=lambda x: x[-1], reverse=True)
     #On dessine les faces :
-    for face in face_list:
+    for face in face_list[(len(face_list)//1000)*200:]: #À partir d'un certain nombre de faces on affiche plus les plus éloignées
         canvas.create_polygon(face[:-2], fill=colors[face[-2]], outline="black", tag="face")
 
 
