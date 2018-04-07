@@ -154,7 +154,7 @@ if __name__ == "__main__":
     #Taille d'une case en pixels
     caseSize = 30
     #Largeur du tableau
-    boardWidth = 20
+    boardWidth = 40
     #Hauteur du tableau
     boardHeight = 20
     #Interrupteur
@@ -164,6 +164,8 @@ if __name__ == "__main__":
     #Initialisation de la fenêtre
     root = Tk()
     root.title("Le Jeu de La Vie")
+    #Fond de la fenêtre
+    root.configure(background="grey")
     #Initialisation du tableau
     board = [[0 for i in range(boardWidth)] for j in range(boardHeight)]
 
@@ -171,49 +173,55 @@ if __name__ == "__main__":
 
     ###-- TABlEAU --###
     canvas = Canvas(root, width=caseSize*boardWidth, height=caseSize*boardHeight, bg="white")
-    canvas.grid(column=1, row=1, padx=5, pady=5, rowspan=3)
+    canvas.grid(column=1, row=1, padx=2, pady=2, columnspan=100)
     canvas.bind("<Button-1>", changeColor) #Localisation des clics dans le canvas
 
 
-
     ###-- INTERFACE INTERACTIONS UTILISATEUR/PROGRAMME --###
-    userPart = LabelFrame(root, bd=2, text="Utilisateur")
-    userPart.grid(column=2, row=1, padx=5, pady=5, sticky=N)
+    userPart = LabelFrame(root, bd=2, text="Utilisateur", bg="grey", fg="white")
+    userPart.grid(column=100, row=2, padx=5, pady=2, sticky=W)
+
     #Bouton de lancement
-    launchButton = Button(userPart, text="Lancer la simulation", command=neighborsFinding)
+    launchButton = Button(userPart, text="Lancer la simulation", command=neighborsFinding, bg="#545556", fg="white", relief="flat")
     launchButton.grid(column=1, row=1, padx=7, pady=5)
     #Bouton de stop
-    stopButton = Button(userPart, text="Stopper la simulation", command=stop)
+    stopButton = Button(userPart, text="Stopper la simulation", command=stop, bg="#545556", fg="white", relief="flat")
     stopButton.grid(column=1, row=2, padx=7, pady=5)
     #Bouton de clear
-    clearButton = Button(userPart, text="Effacer tout", command=clearAll)
+    clearButton = Button(userPart, text="Effacer tout", command=clearAll, bg="#545556", fg="white", relief="flat")
     clearButton.grid(column=1, row=3, padx=7, pady=5)
 
 
 
     ###-- INTERFACE DÉVELOPPEMENT --###
-    devPart = LabelFrame(root, bd=2, text="Développeur")
-    devPart.grid(column=2, row=2, padx=5, pady=5, sticky=N)
+    devPart = LabelFrame(root, bd=2, text="Développeur", bg="grey", fg="white")
+    devPart.grid(column=99, row=2, padx=5, pady=2, sticky=W)
+
     #Coordonnées dans le canvas
     canvCoords = StringVar()
     canvCoords.set("Coordonnées :")
-    cDisp1 = Label(devPart, textvariable=canvCoords)
+    cDisp1 = Label(devPart, textvariable=canvCoords, bg="grey", fg="white")
     cDisp1.grid(column=1, row=1, padx=7, pady=5)
     #Coordonnées dans le tableau
     boardCoords = StringVar()
     boardCoords.set("Dans le tableau :")
-    cDisp2 = Label(devPart, textvariable=boardCoords)
+    cDisp2 = Label(devPart, textvariable=boardCoords, bg="grey", fg="white")
     cDisp2.grid(column=1, row=2, padx=7, pady=5)
 
 
 
     ###-- ÉTAT DE LA SIMULATION --###
-    statePart = LabelFrame(root, bd=2, text="État de la simulation")
-    statePart.grid(column=2, row=3, padx=5, pady=5, sticky=N)
+    statePart = LabelFrame(devPart, bd=2, text="État de la simulation", bg="grey", fg="white")
+    statePart.grid(column=1, row=3, padx=5, pady=5, sticky=W)
+
     state = StringVar()
     state.set("Arrêteée")
-    stateDisplay = Label(statePart, textvariable=state)
+    stateDisplay = Label(statePart, textvariable=state, bg="grey", fg="white")
     stateDisplay.grid(column=1, row=1, padx=7, pady=5)
+
+
+    #Fenêtre non-redimensionnable (provisoire)
+    root.resizable(False, False)
 
 
 
