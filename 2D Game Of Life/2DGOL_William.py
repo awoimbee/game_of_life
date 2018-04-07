@@ -13,37 +13,36 @@ import copy
 def display():
     "Affiche un tableau dans le canvas à partir de la liste"
     global board
-    
+
     #Effacer toute les cellules
     canvas.delete("cell")
 
     #Coordonnées dans le canvas qui servent à placer les carrés
     x, y = 0, 0
-    
+
     #Parcours du tableau de long en large
     for row in range(len(board)):
         for column in range(len(board[0])):
 
             #Cas d'une case morte
             if board[row][column] == 0:
-                canvas.create_rectangle(x, y, x+cPix, y+cPix, fill="white", tag="cell")
+                canvas.create_rectangle(x, y, x+caseSize, y+caseSize, fill="white", tag="cell")
 
             #Cas d'une case vivante
             if board[row][column] == 1:
-                canvas.create_rectangle(x, y, x+cPix, y+cPix, fill="black", tag="cell")
+                canvas.create_rectangle(x, y, x+caseSize, y+caseSize, fill="black", tag="cell")
 
             #On passe a la cellule suivante
-            x += cPix
-            
+            x += caseSize
+
             #Retour à la ligne
-            if x >= caseNumber*cPix:
+            if x >= boardWidth*caseSize:
                 x = 0
-                
-        y += cPix
-        
+
+        y += caseSize
+
     #Affichage final
     root.update()
-
 
 
 
@@ -71,7 +70,7 @@ def neighborsFinding():
                 for i in range(-1, 2):
                     for j in range(-1, 2):
                         #Ajout de la valeur de la case à "neighbors"
-                        neighbors+=board[(row+i+caseNumber)%caseNumber][(column+j+caseNumber)%caseNumber]
+                        neighbors+=board[(row+i+boardHeight)%boardHeight][(column+j+boardWidth)%boardWidth]
 
                 #Retrait de la cellule étudiée (pas voisine)
                 neighbors -= board[row][column]
@@ -79,22 +78,22 @@ def neighborsFinding():
                 #Application des règles du jeu de la vie
                 if board[row][column]==1 and (neighbors<2 or neighbors >3):
                     board_new[row][column] = 0    #Mort car pas assez de cellules voisines
-                    
+
                 elif board[row][column]==1 and (neighbors==2 or neighbors==3):
                     board_new[row][column] = 1    #Vie qui continue
 
                 elif board[row][column]==0 and neighbors==3:
                     board_new[row][column] = 1    #Naissance car 3 cellules voisines
 
-                
+
 
         #Mise à jour de l'ancien tableau
         board=board_new
-        
+
         #Mise à jour de l'étape et de l'état
         step += 1
         state.set("En cours" + " (étape "+ str(step) + ")")
-        
+
         #Affichage
         display()
 
@@ -115,15 +114,16 @@ def changeColor(event):
 
     #Affichage des coordonnées dans le canvas
     canvCoords.set("Coordonnées : " + str(event.x) + " ; " + str(event.y))
-    
+
     #Calcul et affichage des coordonnées dans la case dans le tableau
-    boardColumn = event.x//caseNumber
-    boardRow = event.y//caseNumber
+    boardColumn = event.x//caseSize
+    boardRow = event.y//caseSize
     boardCoords.set("Dans le tableau : " + str(boardColumn) + " ; " + str(boardRow))
 
     #Si on clique sur une case blanche, elle devient noire
     if board[boardRow][boardColumn]==0:
         board[boardRow][boardColumn] = 1
+
     #Si on clique sur une case noire, elle devient blanche
     elif board[boardRow][boardColumn]==1:
         board[boardRow][boardColumn] = 0
@@ -139,7 +139,7 @@ def clearAll():
 
     #Ré-initialisation des étapes
     step = 0
-    board = [[0 for i in range(caseNumber)] for j in range(caseNumber)]
+    board = [[0 for i in range(boardWidth)] for j in range(boardHeight)]
 
     #Affichage
     display()
@@ -151,21 +151,26 @@ def clearAll():
 if __name__ == "__main__":
 
     ###-- INITIALISATION DES VARIABLES --####
-    cPix = 30   #Nombre de pixels d'une case
-    caseNumber = 30     #Nombre de cases
-    keepgoing=True      #Interrupteur
-    step = 0            #Étapes
-
+    #Taille d'une case en pixels
+    caseSize = 30
+    #Largeur du tableau
+    boardWidth = 20
+    #Hauteur du tableau
+    boardHeight = 20
+    #Interrupteur
+    keepgoing=True
+    #Étapes
+    step = 0
     #Initialisation de la fenêtre
     root = Tk()
     root.title("Le Jeu de La Vie")
     #Initialisation du tableau
-    board = [[0 for i in range(caseNumber)] for j in range(caseNumber)]
+    board = [[0 for i in range(boardWidth)] for j in range(boardHeight)]
 
 
 
     ###-- TABlEAU --###
-    canvas = Canvas(root, width=cPix*caseNumber, height=cPix*caseNumber, bg="white")
+    canvas = Canvas(root, width=caseSize*boardWidth, height=caseSize*boardHeight, bg="white")
     canvas.grid(column=1, row=1, padx=5, pady=5, rowspan=3)
     canvas.bind("<Button-1>", changeColor) #Localisation des clics dans le canvas
 
