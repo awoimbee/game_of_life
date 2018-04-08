@@ -19,18 +19,13 @@ def display():
 
     #Coordonnées dans le canvas qui servent à placer les carrés
     x, y = 0, 0
-
     #Parcours du tableau de long en large
     for row in range(len(board)):
         for column in range(len(board[0])):
 
-            #Cas d'une case morte
-            if board[row][column] == 0:
-                canvas.create_rectangle(x, y, x+caseSize, y+caseSize, fill="white", tag="cell")
-
-            #Cas d'une case vivante
+            #On trace seulement si la case est vivante
             if board[row][column] == 1:
-                canvas.create_rectangle(x, y, x+caseSize, y+caseSize, fill="black", tag="cell")
+                canvas.create_rectangle(x, y, x+caseSize, y+caseSize, fill="black", tag="cell", outline="grey")
 
             #On passe a la cellule suivante
             x += caseSize
@@ -172,7 +167,7 @@ if __name__ == "__main__":
 
 
     ###-- TABlEAU --###
-    canvas = Canvas(root, width=caseSize*boardWidth, height=caseSize*boardHeight, bg="white")
+    canvas = Canvas(root, width=caseSize*boardWidth, height=caseSize*boardHeight, bg="white", bd=0, highlightthickness=0)
     canvas.grid(column=1, row=1, padx=2, pady=2, columnspan=100)
     canvas.bind("<Button-1>", changeColor) #Localisation des clics dans le canvas
 
@@ -222,6 +217,20 @@ if __name__ == "__main__":
 
     #Fenêtre non-redimensionnable (provisoire)
     root.resizable(False, False)
+
+    ###-- TRACAGE DU QUADRILLAGE --###
+    #Traçage du quadrillage vertical
+    a,b = 0,0
+    for i in range(len(board)):
+        for j in range(len(board[0])):
+            canvas.create_line(a, b, a, b+boardHeight*caseSize, fill="grey")
+            a += caseSize
+    #Traçage d'un quadrillage horizontal
+    a, b = 0,0
+    for i in range(len(board)):
+        for j in range(len(board[0])):
+            canvas.create_line(a, b, a+boardWidth*caseSize, b, fill="grey")
+            b += caseSize
 
 
 
