@@ -7,9 +7,11 @@
 from tkinter import *
 from random import randint
 import time
-import copy
 
 
+##########################################
+#   FONCTIONS DU JEU DE LA VIE EN 2D     #
+##########################################
 def display():
     "Affiche un tableau dans le canvas à partir de la liste"
     global board
@@ -37,13 +39,14 @@ def display():
         y += caseSize
 
     #Affichage final
+    time.sleep(0.03)
     root.update()
 
 
 
 def neighborsFinding():
     "Chercher voisins + calculer couleur nouvelle case"
-    global keepgoing, step, board
+    global keepgoing, step, board, boardWidth, boardHeight
 
     #Démarrage du processus
     keepgoing = True
@@ -52,7 +55,7 @@ def neighborsFinding():
     while keepgoing:
 
         #Copie intégrale du tableau
-        board_new= copy.deepcopy(board)
+        board_new=[[0 for i in range(boardWidth)] for j in range(boardHeight)]
 
         #Parcours du tableau de long en large
         for row in range(len(board)):
@@ -80,7 +83,8 @@ def neighborsFinding():
                 elif board[row][column]==0 and neighbors==3:
                     board_new[row][column] = 1    #Naissance car 3 cellules voisines
 
-
+                else:
+                    board_new[row][column] = board[row][column]
 
         #Mise à jour de l'ancien tableau
         board=board_new
@@ -141,17 +145,19 @@ def clearAll():
 
 
 
-#####------FENETRE PRINCIPALE-----#####
+##########################################
+#          PROGRAMME PRINCIPAL           #
+##########################################
 
 if __name__ == "__main__":
 
-    ###-- INITIALISATION DES VARIABLES --####
+    ######## INITIALISATION DES VARIABLES ########
     #Taille d'une case en pixels
-    caseSize = 30
+    caseSize = 20
     #Largeur du tableau
     boardWidth = 40
     #Hauteur du tableau
-    boardHeight = 20
+    boardHeight = 30
     #Interrupteur
     keepgoing=True
     #Étapes
@@ -166,59 +172,59 @@ if __name__ == "__main__":
 
 
 
-    ###-- TABlEAU --###
+    ######## TABlEAU ########
     canvas = Canvas(root, width=caseSize*boardWidth, height=caseSize*boardHeight, bg="white", bd=0, highlightthickness=0)
     canvas.grid(column=1, row=1, padx=2, pady=2, columnspan=100)
     canvas.bind("<Button-1>", changeColor) #Localisation des clics dans le canvas
 
 
-    ###-- INTERFACE INTERACTIONS UTILISATEUR/PROGRAMME --###
-    userPart = LabelFrame(root, bd=2, text="Utilisateur", bg="grey", fg="white")
+    ######## INTERFACE INTERACTIONS UTILISATEUR/PROGRAMME ########
+    userPart = LabelFrame(root, bd=2, text="Utilisateur", bg="grey", fg="white", font=("Calibri", 12))
     userPart.grid(column=100, row=2, padx=5, pady=2, sticky=W)
 
     #Bouton de lancement
-    launchButton = Button(userPart, text="Lancer la simulation", command=neighborsFinding, bg="#545556", fg="white", relief="flat")
+    launchButton = Button(userPart, text="Lancer la simulation", command=neighborsFinding, bg="#545556", fg="white", relief="flat", font=("Calibri", 12))
     launchButton.grid(column=1, row=1, padx=7, pady=5)
     #Bouton de stop
-    stopButton = Button(userPart, text="Stopper la simulation", command=stop, bg="#545556", fg="white", relief="flat")
+    stopButton = Button(userPart, text="Stopper la simulation", command=stop, bg="#545556", fg="white", relief="flat", font=("Calibri", 12))
     stopButton.grid(column=1, row=2, padx=7, pady=5)
     #Bouton de clear
-    clearButton = Button(userPart, text="Effacer tout", command=clearAll, bg="#545556", fg="white", relief="flat")
+    clearButton = Button(userPart, text="Effacer tout", command=clearAll, bg="#545556", fg="white", relief="flat", font=("Calibri", 12))
     clearButton.grid(column=1, row=3, padx=7, pady=5)
 
 
 
-    ###-- INTERFACE DÉVELOPPEMENT --###
-    devPart = LabelFrame(root, bd=2, text="Développeur", bg="grey", fg="white")
+    ######## INTERFACE DÉVELOPPEMENT ########
+    devPart = LabelFrame(root, bd=2, text="Développeur", bg="grey", fg="white", font=("Calibri", 12))
     devPart.grid(column=99, row=2, padx=5, pady=2, sticky=W)
 
     #Coordonnées dans le canvas
     canvCoords = StringVar()
     canvCoords.set("Coordonnées :")
-    cDisp1 = Label(devPart, textvariable=canvCoords, bg="grey", fg="white")
+    cDisp1 = Label(devPart, textvariable=canvCoords, bg="grey", fg="white", font=("Calibri", 12))
     cDisp1.grid(column=1, row=1, padx=7, pady=5)
     #Coordonnées dans le tableau
     boardCoords = StringVar()
     boardCoords.set("Dans le tableau :")
-    cDisp2 = Label(devPart, textvariable=boardCoords, bg="grey", fg="white")
+    cDisp2 = Label(devPart, textvariable=boardCoords, bg="grey", fg="white", font=("Calibri", 12))
     cDisp2.grid(column=1, row=2, padx=7, pady=5)
 
 
 
-    ###-- ÉTAT DE LA SIMULATION --###
-    statePart = LabelFrame(devPart, bd=2, text="État de la simulation", bg="grey", fg="white")
+    ######## ÉTAT DE LA SIMULATION ########
+    statePart = LabelFrame(devPart, bd=2, text="État de la simulation", bg="grey", fg="white", font=("Calibri", 12))
     statePart.grid(column=1, row=3, padx=5, pady=5, sticky=W)
 
     state = StringVar()
     state.set("Arrêteée")
-    stateDisplay = Label(statePart, textvariable=state, bg="grey", fg="white")
+    stateDisplay = Label(statePart, textvariable=state, bg="grey", fg="white", font=("Calibri", 12))
     stateDisplay.grid(column=1, row=1, padx=7, pady=5)
 
 
     #Fenêtre non-redimensionnable (provisoire)
     root.resizable(False, False)
 
-    ###-- TRACAGE DU QUADRILLAGE --###
+    ######## TRACAGE DU QUADRILLAGE ########
     #Traçage du quadrillage vertical
     a,b = 0,0
     for i in range(len(board)):
