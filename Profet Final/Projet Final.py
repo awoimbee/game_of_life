@@ -26,10 +26,11 @@ class Cube:
     vertices = (-0.5,0.5,-0.5),(0.5,0.5,-0.5),(0.5,-0.5,-0.5),(-0.5,-0.5,-0.5), (-0.5,0.5,0.5),(0.5,0.5,0.5),(0.5,-0.5,0.5),(-0.5,-0.5,0.5)
     faces = (4,5,6,7),(0,3,7,4),(1,2,6,5),(3,2,6,7),(0,1,5,4),(0,1,2,3)
     life = int()
-    def __init__(self, pos=(0,0,0), life=0):
+    def __init__(self, pos=(0,0,0), fake=False):
         #On calcule les coordonnees de chaque point du cube en fonction de sa position à l'origine et de la position de l'objet dans l'espace
         self.vertices = [(pos[0]+X, pos[1]+Y, pos[2]+Z) for X,Y,Z in self.vertices]
-        self.life=life
+        if (fake):
+            self.faces = ((3,2,6,7),(0,1,5,4))
 
 class RenderingIn3D :
     "Classe principale du moteur 3D"
@@ -44,7 +45,6 @@ class RenderingIn3D :
         "Calcule le déplacement de la camera"
         sensMouv = 1/10 #Sensibilite des mouvements
         sensRot = 1/30 #Sensibilite de la rotation
-
         while(True):
             time.sleep(0.01)
             for key in self.pressedkeys:
@@ -67,7 +67,6 @@ class RenderingIn3D :
                     self.cam.pos[1]+=sensMouv
                 elif key == 'e':
                     self.cam.pos[1]-=sensMouv
-
                 #Rotation
                 # Axe X  |  Axe Y
                 # rot[1] |  rot[0]
@@ -82,8 +81,6 @@ class RenderingIn3D :
 
                 elif key == 'Escape':
                     _thread.interrupt_main() #exit
-
-
 
     def rotate2D(self, vertex, rotation):
         "Rotation en 2 dimensions de l'axe partant de l'origine vers le point vertex"
@@ -106,74 +103,64 @@ class RenderingIn3D :
         root.bind("<KeyRelease>", self.keyup)
         frame.pack()
 
-
-        i,frameRate=0,0
+        _thread.start_new_thread(self.movement, ( )) #Les déplacements sont calculés dans un autre thread (=coeur du processeur)
         while True:
             """ Le rendu 3D est fait ici """
             canvas.delete("all") #On remet l'image à 0
             face_list=[] #Contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), int(couleur), int(profondeur) ], [ (x,y),...], ...]
             #On calcule comment dessiner chaque cube
-            for board in self.objects:
-                for obj in board :
-                    obj_faces=[]
-                    for face in obj.faces:
-                        depth = 0
-                        face_points = [] #Contient 4 sommets à connecter -> (x,y),(x,y),(x,y),(x,y)
-                        for x,y,z in (obj.vertices[face[0]], obj.vertices[face[1]], obj.vertices[face[2]], obj.vertices[face[3]]):
-                            #Le monde bouge par rapport a la caméra
-                            x-=self.cam.pos[0]
-                            y-=self.cam.pos[1]
-                            z-=self.cam.pos[2]
+            for obj in self.objects :
+                obj_faces=[]
+                for face in obj.faces:
+                    depth = 0
+                    face_points = [] #Contient 4 sommets à connecter -> (x,y),(x,y),(x,y),(x,y)
+                    for x,y,z in (obj.vertices[face[0]], obj.vertices[face[1]], obj.vertices[face[2]], obj.vertices[face[3]]):
+                        #Le monde bouge par rapport a la caméra
+                        x-=self.cam.pos[0]
+                        y-=self.cam.pos[1]
+                        z-=self.cam.pos[2]
 
-                            x,z = self.rotate2D((x,z),self.cam.rot[1]) #x et z modifies par la rotation autour de y
-                            y,z = self.rotate2D((y,z),self.cam.rot[0]) #y et z modifies par la rotation autour de x
-                            if z<=0:
-                                #On affiche pas ce qui est hors champ
-                                face_points = None
-                                break
-                            f=(self.width/2)/z #Coefficient de stéréoscopie
-                            X,Y = int(x*f)+self.sWidth, int(y*f)+self.sHeight #Position en pixels des sommets sur l'image 2D ; +Swidth et +Sheight car le repere xyz est placé au milieu de l'ecran
-                            if not 0<X<self.width or not 0<Y<self.height :
-                                #On affiche pas ce qui est hors champ
-                                face_points = None
-                                break
-                            face_points.append((X, Y)) #Position en pixels des sommets sur l'image 2D
-                            depth += (x**2)+(y**2)+(z**2) #Se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
-                        if not face_points:
-                            #On arrête de calculer les faces de l'objet
+                        x,z = self.rotate2D((x,z),self.cam.rot[1]) #x et z modifies par la rotation autour de y
+                        y,z = self.rotate2D((y,z),self.cam.rot[0]) #y et z modifies par la rotation autour de x
+                        if z<=0:
+                            #On affiche pas ce qui est hors champ
+                            face_points = None
                             break
-                        face_points.extend( (obj.life, depth) ) #face_points contient les coordonnées des points de la face, mais aussi la couleur et profondeur de la face
-                        obj_faces.append(face_points)
-                    if not obj_faces :
-                        continue
-                    #On trie les faces des objets et les ajoute à la liste de toutes les faces
-                    obj_faces.sort(key=lambda x: x[-1], reverse=True)
-                    face_list.append(obj_faces[-3:]) #[-3:] Car on ne dessine que les 3 faces maximum visibles simultanément de chaque cube
-                #On trie les objets
-                face_list.sort(key=lambda x: x[0][-1], reverse=True)
-                #On dessine les objets/faces :
-                for obj_faces in face_list:
-                    for face in obj_faces :
-                        color = '#000000' if face[-2]==True else "#ffffff"
-                        canvas.create_polygon(face[:-2], fill=color, outline="black")
+                        f=(self.width/2)/z #Coefficient de stéréoscopie
+                        X,Y = int(x*f)+self.sWidth, int(y*f)+self.sHeight #Position en pixels des sommets sur l'image 2D ; +Swidth et +Sheight car le repere xyz est placé au milieu de l'ecran
+                        if not -self.sWidth<X<self.width+self.sWidth or not -self.sHeight<Y<self.height+self.sHeight :
+                            #On affiche pas ce qui est hors champ
+                            face_points = None
+                            break
+                        face_points.append((X, Y)) #Position en pixels des sommets sur l'image 2D
+                        depth += (x**2)+(y**2)+(z**2) #Se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
+                    if not face_points:
+                        #On arrête de calculer les faces de l'objet
+                        break
+                    face_points.extend( (obj.life, depth) ) #face_points contient les coordonnées des points de la face, mais aussi la couleur et profondeur de la face
+                    obj_faces.append(face_points)
+                if not obj_faces :
+                    continue
+                #On trie les faces des objets et les ajoute à la liste de toutes les faces
+                obj_faces.sort(key=lambda x: x[-1], reverse=True)
+                face_list.append(obj_faces) #[-3:] Car on ne dessine que les 3 faces maximum visibles simultanément de chaque cube
+            #On trie les objets
+            face_list.sort(key=lambda x: x[0][-1], reverse=True)
+            #On dessine les objets/faces :
+            for obj_faces in face_list:
+                for face in obj_faces :
+                    canvas.create_polygon(face[:-2], fill="#ffffff", outline="black")
             root.update()
 
-
-
     def newLine(self, board) :
-        if len(self.objects) > 0:
-            del self.objects[0]
-        self.maxZ += 4
-        Z = self.maxZ
-        self.objects.append( [ Cube((X,Z,Y), board[Y][X]) for X in range(len(board[0])) for Y in range(len(board)) ] )
-        self.cam.pos[1] += 4
-
+        #self.objects = [ Cube((X,0,Y), board[Y][X], True) if X!=0 and Y!=0 and X!=len(board[0])-1 and Y!=len(board)-1 else Cube((X,0,Y), board[Y][X])   for X in range(len(board[0])) for Y in range(len(board)) ]
+        if self.rendering :
+            self.objects = [ Cube((X,0,Y)) for X in range(len(board[0])) for Y in range(len(board)) if board[Y][X] ]
 
     def launchWindow(self):
         "Lance la fenêtre du jeu de la vie en 3D"
-        _thread.start_new_thread(self.movement, ( )) #Les déplacements sont calculés dans un autre thread (=coeur du processeur)
+        self.rendering=True
         _thread.start_new_thread(self.window_mainloop, ( ))
-
 
     def __init__(self, cam, height, width):
         self.pressedkeys = []
@@ -182,7 +169,7 @@ class RenderingIn3D :
         self.width = width
         self.cam = cam
         self.sWidth, self.sHeight = int(width/2), int(height/2)
-        self.maxZ = 0
+        self.rendering=False
 
 ##########################################
 #   FONCTIONS DU JEU DE LA VIE EN 2D     #
