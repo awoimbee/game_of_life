@@ -1,5 +1,5 @@
 ###########################################################################################################
-# Maillet William - Test du jeu de la vie                                                                 #
+# Maillet William - Arthur Woimbée - JEU DE LA VIE 2D ET 3D                                               #
 ###########################################################################################################
 
 
@@ -22,12 +22,12 @@ class Camera:
 
 class Cube:
     "Classe de l'objet cube"
-    #sommets du cube quand il est positionné sur l'origine des reperes x,y,z puis ses faces
+    #Sommets du cube quand il est positionné sur l'origine des repères x,y,z puis ses faces
     vertices = (-0.5,0.5,-0.5),(0.5,0.5,-0.5),(0.5,-0.5,-0.5),(-0.5,-0.5,-0.5), (-0.5,0.5,0.5),(0.5,0.5,0.5),(0.5,-0.5,0.5),(-0.5,-0.5,0.5)
     faces = (4,5,6,7),(0,3,7,4),(1,2,6,5),(3,2,6,7),(0,1,5,4),(0,1,2,3)
-    life = int()    
+    life = int()
     def __init__(self, pos=(0,0,0), life=0):
-        #on calcule les coordonnees de chaque point du cube en fonction de sa position à l'origine et de la position de l'objet dans l'espace
+        #On calcule les coordonnees de chaque point du cube en fonction de sa position à l'origine et de la position de l'objet dans l'espace
         self.vertices = [(pos[0]+X, pos[1]+Y, pos[2]+Z) for X,Y,Z in self.vertices]
         self.life=life
 
@@ -41,14 +41,14 @@ class RenderingIn3D :
             self.pressedkeys.pop(self.pressedkeys.index(event.keysym))
 
     def movement(self):
-        """Calcule le déplacement de la camera"""
-        sensMouv = 1/10 #sensibilite des mouvements
-        sensRot = 1/30 #sensibilite de la rotation
-        
+        "Calcule le déplacement de la camera"
+        sensMouv = 1/10 #Sensibilite des mouvements
+        sensRot = 1/30 #Sensibilite de la rotation
+
         while(True):
             time.sleep(0.01)
             for key in self.pressedkeys:
-                #déplacement
+                #Déplacement
                 x,y = math.sin(self.cam.rot[1])*sensMouv, math.cos(self.cam.rot[1])*sensMouv
                 if key == 'd':
                     self.cam.pos[0]+=y
@@ -68,8 +68,8 @@ class RenderingIn3D :
                 elif key == 'e':
                     self.cam.pos[1]-=sensMouv
 
-                #rotation
-                # axe X  |  axe Y
+                #Rotation
+                # Axe X  |  Axe Y
                 # rot[1] |  rot[0]
                 elif key == 'Left':
                     self.cam.rot[1]-=sensRot
@@ -83,8 +83,10 @@ class RenderingIn3D :
                 elif key == 'Escape':
                     _thread.interrupt_main() #exit
 
+
+
     def rotate2D(self, vertex, rotation):
-        """Rotation en 2 dimensions de l'axe partant de l'origine vers le point "vertex" """
+        "Rotation en 2 dimensions de l'axe partant de l'origine vers le point vertex"
         #https://www.siggraph.org/education/materials/HyperGraph/modeling/mod_tran/2drota.htm
         sin=math.sin(rotation)
         cos=math.cos(rotation)
@@ -92,32 +94,33 @@ class RenderingIn3D :
 
 
     def window_mainloop(self):
+        "Création de la fenêtre"
         root = tkinter.Tk()
         frame = tkinter.Frame(root, width=self.width, height=self.height)
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
-        #création du canvas et paramétrage de la récupération de l'entrée utilisateur
+        #Création du canvas et paramétrage de la récupération de l'entrée utilisateur
         canvas = tkinter.Canvas(frame, width=self.width, height=self.height, bg="#343D46")
         canvas.grid(row=0, column=0, sticky=tkinter.N+tkinter.S+tkinter.E+tkinter.W)
         root.bind("<KeyPress>", self.keydown)
         root.bind("<KeyRelease>", self.keyup)
         frame.pack()
 
-    
+
         i,frameRate=0,0
         while True:
             """ Le rendu 3D est fait ici """
-            canvas.delete("all") #on remet l'image à 0
-            face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), int(couleur), int(profondeur) ], [ (x,y),...], ...]
-            #on calcule comment dessiner chaque cube
+            canvas.delete("all") #On remet l'image à 0
+            face_list=[] #Contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), int(couleur), int(profondeur) ], [ (x,y),...], ...]
+            #On calcule comment dessiner chaque cube
             for board in self.objects:
                 for obj in board :
                     obj_faces=[]
                     for face in obj.faces:
                         depth = 0
-                        face_points = [] #contient 4 sommets a connecter -> (x,y),(x,y),(x,y),(x,y)
+                        face_points = [] #Contient 4 sommets à connecter -> (x,y),(x,y),(x,y),(x,y)
                         for x,y,z in (obj.vertices[face[0]], obj.vertices[face[1]], obj.vertices[face[2]], obj.vertices[face[3]]):
-                            #le monde bouge par rapport a la camera
+                            #Le monde bouge par rapport a la caméra
                             x-=self.cam.pos[0]
                             y-=self.cam.pos[1]
                             z-=self.cam.pos[2]
@@ -125,35 +128,37 @@ class RenderingIn3D :
                             x,z = self.rotate2D((x,z),self.cam.rot[1]) #x et z modifies par la rotation autour de y
                             y,z = self.rotate2D((y,z),self.cam.rot[0]) #y et z modifies par la rotation autour de x
                             if z<=0:
-                                #on affiche pas ce qui est hors champ
+                                #On affiche pas ce qui est hors champ
                                 face_points = None
                                 break
-                            f=(self.width/2)/z #coefficient de stereoscopie
-                            X,Y = int(x*f)+self.sWidth, int(y*f)+self.sHeight #position en pixels des sommets sur l'image 2D ; +Swidth et +Sheight car le repere xyz est placé au milieu de l'ecran
+                            f=(self.width/2)/z #Coefficient de stéréoscopie
+                            X,Y = int(x*f)+self.sWidth, int(y*f)+self.sHeight #Position en pixels des sommets sur l'image 2D ; +Swidth et +Sheight car le repere xyz est placé au milieu de l'ecran
                             if not 0<X<self.width or not 0<Y<self.height :
-                                #on affiche pas ce qui est hors champ
+                                #On affiche pas ce qui est hors champ
                                 face_points = None
                                 break
-                            face_points.append((X, Y)) #position en pixels des sommets sur l'image 2D
-                            depth += (x**2)+(y**2)+(z**2) #se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
+                            face_points.append((X, Y)) #Position en pixels des sommets sur l'image 2D
+                            depth += (x**2)+(y**2)+(z**2) #Se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
                         if not face_points:
-                            #on arrete de calculer les faces de l'objet
+                            #On arrête de calculer les faces de l'objet
                             break
-                        face_points.extend( (obj.life, depth) ) #face_points contient les coordonnees des points de la face, mais aussi la couleur et profondeur de la face
+                        face_points.extend( (obj.life, depth) ) #face_points contient les coordonnées des points de la face, mais aussi la couleur et profondeur de la face
                         obj_faces.append(face_points)
                     if not obj_faces :
                         continue
-                    #on trie les faces des objets et les ajoutes a la liste de toutes les faces
+                    #On trie les faces des objets et les ajoute à la liste de toutes les faces
                     obj_faces.sort(key=lambda x: x[-1], reverse=True)
-                    face_list.append(obj_faces[-3:]) #[-3:] car on ne dessine que les 3 faces maximum visibles simultanément de chaque cube
-                #on trie les objets
+                    face_list.append(obj_faces[-3:]) #[-3:] Car on ne dessine que les 3 faces maximum visibles simultanément de chaque cube
+                #On trie les objets
                 face_list.sort(key=lambda x: x[0][-1], reverse=True)
                 #On dessine les objets/faces :
                 for obj_faces in face_list:
                     for face in obj_faces :
-                        color = '#000000' if face[-2]==True else "#ffffff" 
+                        color = '#000000' if face[-2]==True else "#ffffff"
                         canvas.create_polygon(face[:-2], fill=color, outline="black")
             root.update()
+
+
 
     def newLine(self, board) :
         if len(self.objects) > 0:
@@ -166,10 +171,10 @@ class RenderingIn3D :
 
     def launchWindow(self):
         "Lance la fenêtre du jeu de la vie en 3D"
-        _thread.start_new_thread(self.movement, ( )) #les déplacements sont calculés dans un autre thread
+        _thread.start_new_thread(self.movement, ( )) #Les déplacements sont calculés dans un autre thread (=coeur du processeur)
         _thread.start_new_thread(self.window_mainloop, ( ))
 
-        
+
     def __init__(self, cam, height, width):
         self.pressedkeys = []
         self.objects = []
@@ -178,11 +183,6 @@ class RenderingIn3D :
         self.cam = cam
         self.sWidth, self.sHeight = int(width/2), int(height/2)
         self.maxZ = 0
-       
-
-
-
-
 
 ##########################################
 #   FONCTIONS DU JEU DE LA VIE EN 2D     #
@@ -217,8 +217,6 @@ def display():
     #Affichage final
     time.sleep(0.01)
     root.update()
-
-
 
 def neighborsFinding():
     "Chercher voisins + calculer couleur nouvelle case"
@@ -267,15 +265,13 @@ def neighborsFinding():
 
         #Actualisation du tableau de la partie 3D
         renderer3D.newLine(board)
-                                              
+
         #Mise à jour de l'étape et de l'état
         step += 1
         state.set("En cours" + " (étape "+ str(step) + ")")
 
         #Affichage
         display()
-
-
 
 def stop():
     "Arrête le programme grâce à un interrupteur"
@@ -285,11 +281,9 @@ def stop():
     keepgoing = False
     state.set("Arrêtée" + " (étape "+ str(step) + ")")
 
-
-
 def changeColor(event):
     "Change la couleur de la case cliquée"
-    
+
     #Affichage des coordonnées dans le canvas
     canvCoords.set("Coordonnées : " + str(event.x) + " ; " + str(event.y))
 
@@ -310,8 +304,6 @@ def changeColor(event):
     renderer3D.newLine(board)
     display()
 
-
-
 def clearAll():
     "Efface toute les cellules"
     global board, step
@@ -326,9 +318,31 @@ def clearAll():
 def launch3D():
     "Lance le jeu de la vie en 3D"
     renderer3D.launchWindow()
-    
-    
 
+def ship():
+    "Trace un vaisseau spatial dans le jeu de la vie"
+    global board
+
+    #Centre du vaisseau, au centre du canvas
+    middleX = boardWidth//2
+    middleY = boardHeight//2
+    #Remise à 0 du tableau
+    board = [[0 for i in range(boardWidth)] for j in range(boardHeight)]
+
+    #Ouverture d'un fichier qui contient des coordonnées
+    f = open("ship.txt", "r")
+    shipY, shipX = [], []
+    #Ajout de chaques coordonnées dans une liste
+    for l in f:
+        row = l.split() #Transformation d'un caractère en liste
+        shipY.append(row[0]) #Ajout de la première coordonnée
+        shipX.append(row[1]) #De la deuxième
+
+    #Traçage du vaisseau dans le canvas
+    for i in range(len(shipY)):
+        board[middleY+int(shipY[i])][middleX+int(shipX[i])] = 1
+
+    display()
 
 ##########################################
 #          PROGRAMME PRINCIPAL           #
@@ -340,9 +354,9 @@ if __name__ == "__main__":
     #Taille d'une case en pixels
     caseSize = 20
     #Largeur du tableau
-    boardWidth = 20
+    boardWidth = 40
     #Hauteur du tableau
-    boardHeight = 20
+    boardHeight = 30
     #Interrupteur
     keepgoing=True
     #Étapes
@@ -407,10 +421,12 @@ if __name__ == "__main__":
     stateDisplay = tkinter.Label(statePart, textvariable=state, bg="grey", fg="white", font=("Calibri", 12))
     stateDisplay.grid(column=1, row=1, padx=7, pady=5)
 
+    ######## BOUTON DE LA SIMULATION 3D ########
+    tkinter.Button(root, text="Visualisation en 3D", bg="#545556", fg="white", font=("Calibri", 12), relief="flat", command=launch3D).grid(row=2, column=98, padx=5, pady=5)
 
+    ######## BOUTONS POUR DIVERSES FORMES ########
+    tkinter.Button(root, text="Vaisseau", bg="#545556", fg="white", font=("Calibri", 12), relief="flat", command=ship).grid(row=2, column=1, padx=5, pady=5)
 
-    tkinter.Button(root, text="3D", bg="grey", fg="white", command=launch3D).grid(row=2, column=98, padx=5, pady=5)
-    
     #Fenêtre non-redimensionnable
     root.resizable(False, False)
 
