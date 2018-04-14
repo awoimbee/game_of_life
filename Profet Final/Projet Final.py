@@ -5,10 +5,9 @@
 
 #Importation de divers modules utiles
 import tkinter
-from random import randint
 import time
 from PIL import ImageTk, Image
-import math, random
+import math
 import _thread
 
 ##########################################
@@ -43,10 +42,10 @@ class RenderingIn3D :
 
     def movement(self):
         "Calcule le déplacement de la camera"
-        sensMouv = 1/10 #Sensibilite des mouvements
-        sensRot = 1/30 #Sensibilite de la rotation
+        sensMouv = 1/2 #Sensibilite des mouvements
+        sensRot = 1/6 #Sensibilite de la rotation
         while(True):
-            time.sleep(0.01)
+            time.sleep(0.05)
             for key in self.pressedkeys:
                 #Déplacement
                 x,y = math.sin(self.cam.rot[1])*sensMouv, math.cos(self.cam.rot[1])*sensMouv
@@ -62,7 +61,6 @@ class RenderingIn3D :
                 elif key == 's':
                     self.cam.pos[0]-=x
                     self.cam.pos[2]-=y
-
                 elif key == 'q':
                     self.cam.pos[1]+=sensMouv
                 elif key == 'e':
@@ -78,9 +76,8 @@ class RenderingIn3D :
                     self.cam.rot[0]-=sensRot
                 elif key == 'Down':
                     self.cam.rot[0]+=sensRot
-
-                elif key == 'Escape':
-                    _thread.interrupt_main() #exit
+                # elif key == 'Escape':
+                #     _thread.interrupt_main() #exit
 
     def rotate2D(self, vertex, rotation):
         "Rotation en 2 dimensions de l'axe partant de l'origine vers le point vertex"
@@ -126,7 +123,7 @@ class RenderingIn3D :
                             #On affiche pas ce qui est hors champ
                             face_points = None
                             break
-                        f=(self.width/2)/z #Coefficient de stéréoscopie
+                        f=self.sWidth/z #Coefficient de stéréoscopie
                         X,Y = int(x*f)+self.sWidth, int(y*f)+self.sHeight #Position en pixels des sommets sur l'image 2D ; +Swidth et +Sheight car le repere xyz est placé au milieu de l'ecran
                         if not -self.sWidth<X<self.width+self.sWidth or not -self.sHeight<Y<self.height+self.sHeight :
                             #On affiche pas ce qui est hors champ
@@ -137,7 +134,7 @@ class RenderingIn3D :
                     if not face_points:
                         #On arrête de calculer les faces de l'objet
                         break
-                    face_points.extend( (obj.life, depth) ) #face_points contient les coordonnées des points de la face, mais aussi la couleur et profondeur de la face
+                    face_points.append(depth) #face_points contient les coordonnées des points de la face, mais aussi la profondeur de la face
                     obj_faces.append(face_points)
                 if not obj_faces :
                     continue
@@ -149,7 +146,7 @@ class RenderingIn3D :
             #On dessine les objets/faces :
             for obj_faces in face_list:
                 for face in obj_faces :
-                    canvas.create_polygon(face[:-2], fill="#ffffff", outline="black")
+                    canvas.create_polygon(face[:-1], fill="#ffffff", outline="black")
             root.update()
 
     def newLine(self, board) :
