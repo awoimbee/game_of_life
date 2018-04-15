@@ -25,11 +25,9 @@ class Cube:
     vertices = (-0.5,0.5,-0.5),(0.5,0.5,-0.5),(0.5,-0.5,-0.5),(-0.5,-0.5,-0.5), (-0.5,0.5,0.5),(0.5,0.5,0.5),(0.5,-0.5,0.5),(-0.5,-0.5,0.5)
     faces = (4,5,6,7),(0,3,7,4),(1,2,6,5),(3,2,6,7),(0,1,5,4),(0,1,2,3)
     life = int()
-    def __init__(self, pos=(0,0,0), fake=False):
+    def __init__(self, pos=(0,0,0)):
         #On calcule les coordonnees de chaque point du cube en fonction de sa position à l'origine et de la position de l'objet dans l'espace
         self.vertices = [(pos[0]+X, pos[1]+Y, pos[2]+Z) for X,Y,Z in self.vertices]
-        if (fake):
-            self.faces = ((3,2,6,7),(0,1,5,4))
 
 class RenderingIn3D :
     "Classe principale du moteur 3D"
@@ -94,7 +92,7 @@ class RenderingIn3D :
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
         #Création du canvas et paramétrage de la récupération de l'entrée utilisateur
-        canvas = tkinter.Canvas(frame, width=self.width, height=self.height, bg="#343D46")
+        canvas = tkinter.Canvas(frame, width=self.width, height=self.height, bg="#bbbbbb")
         canvas.grid(row=0, column=0, sticky=tkinter.N+tkinter.S+tkinter.E+tkinter.W)
         root.bind("<KeyPress>", self.keydown)
         root.bind("<KeyRelease>", self.keyup)
@@ -146,7 +144,7 @@ class RenderingIn3D :
             #On dessine les objets/faces :
             for obj_faces in face_list:
                 for face in obj_faces :
-                    canvas.create_polygon(face[:-1], fill="#ffffff", outline="black")
+                    canvas.create_polygon(face[:-1], fill="#000000", outline="white")
             root.update()
 
     def newLine(self, board) :
