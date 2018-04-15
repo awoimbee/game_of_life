@@ -358,7 +358,8 @@ if __name__ == "__main__":
     ######## TABlEAU ########
     canvas = tkinter.Canvas(root, width=caseSize*boardWidth, height=caseSize*boardHeight, bg="white", bd=0, highlightthickness=0)
     canvas.grid(column=1, row=1, padx=2, pady=2, columnspan=100)
-    canvas.bind("<Button-1>", changeColor) #Localisation des clics dans le canvas
+    canvas.bind("<Button-1>", changeColor) #Localisation des clics dans le canvas3
+    canvas.bind("<B1-Motion>", changeColor)
 
 
     ######## INTERFACE INTERACTIONS UTILISATEUR/PROGRAMME ########
@@ -377,7 +378,7 @@ if __name__ == "__main__":
 
 
 
-    ######## INTERFACE DÉVELOPPEMENT ########
+    ######## INTERFACE INFORMATION ########
     devPart = tkinter.LabelFrame(root, bd=2, text="Informations", bg="grey", fg="white", font=("Calibri", 12))
     devPart.grid(column=99, row=2, padx=5, pady=2, sticky=tkinter.W)
 
@@ -404,10 +405,10 @@ if __name__ == "__main__":
     stateDisplay.grid(column=1, row=1, padx=7, pady=5)
 
     ######## BOUTON DE LA SIMULATION 3D ########
-    tkinter.Button(root, text="Visualisation en 3D", bg="#545556", fg="white", font=("Calibri", 12), relief="flat", command=launch3D).grid(row=2, column=98, padx=5, pady=5)
+    tkinter.Button(userPart, text="Visualisation en 3D", bg="#545556", fg="white", font=("Calibri", 12), relief="flat", command=launch3D).grid(row=1, column=2, padx=5, pady=5)
 
     ######## BOUTONS POUR DIVERSES FORMES ########
-    tkinter.Button(root, text="Vaisseau", bg="#545556", fg="white", font=("Calibri", 12), relief="flat", command=ship).grid(row=2, column=1, padx=5, pady=5)
+    tkinter.Button(userPart, text="Vaisseau", bg="#545556", fg="white", font=("Calibri", 12), relief="flat", command=ship).grid(row=2, column=2, padx=5, pady=5)
 
     #Fenêtre non-redimensionnable
     root.resizable(False, False)
