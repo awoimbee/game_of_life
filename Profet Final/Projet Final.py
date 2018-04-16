@@ -42,8 +42,8 @@ class RenderingIn3D :
         "Calcule le déplacement de la camera"
         sensMouv = 1/2 #Sensibilite des mouvements
         sensRot = 1/6 #Sensibilite de la rotation
-        while(True):
-            time.sleep(0.05)
+        while(self.rendering):
+            time.sleep(0.03)
             for key in self.pressedkeys:
                 #Déplacement
                 sin,cos = math.sin(self.cam.rot[1])*sensMouv, math.cos(self.cam.rot[1])*sensMouv
@@ -66,7 +66,7 @@ class RenderingIn3D :
                 #Rotation
                 # Axe X  |  Axe Y
                 # rot[1] |  rot[0]
-                elif key == 'Left':
+                elif key == 'Left': #on tourne à gauche
                     self.cam.rot[1]-=sensRot
                 elif key == 'Right':
                     self.cam.rot[1]+=sensRot
@@ -113,7 +113,7 @@ class RenderingIn3D :
                     depth = 0
                     face_points = [] #Contient 4 sommets à connecter -> (x,y),(x,y),(x,y),(x,y)
                     for x,y,z in (obj.vertices[face[0]], obj.vertices[face[1]], obj.vertices[face[2]], obj.vertices[face[3]]):
-                        #Le monde bouge par rapport a la caméra
+                        #La caméra est à l'origine des axes. Ce sont les objets qui se déplacent et non la caméra.
                         x-=self.cam.pos[0]
                         y-=self.cam.pos[1]
                         z-=self.cam.pos[2]
@@ -159,7 +159,7 @@ class RenderingIn3D :
     def launchWindow(self):
         "Lance la fenêtre du jeu de la vie en 3D"
         self.rendering=True
-        _thread.start_new_thread(self.window_mainloop, ( ))
+        _thread.start_new_thread(self.window_mainloop, ( )) #on attend pas la fin de l'exécution de window_mainloop
 
     def __init__(self, cam, height, width):
         self.pressedkeys = []
