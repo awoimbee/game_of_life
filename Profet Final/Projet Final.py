@@ -16,7 +16,7 @@ import _thread
 class Camera:
     "Classe de la caméra"
     def __init__(self, pos=(0,0,0), rot=(0,0)):
-        self.pos = list(pos)
+        self.pos = list(pos) #pos = x,y,z
         self.rot = list(rot) #rot=rotation
 
 class Cube:
@@ -46,19 +46,19 @@ class RenderingIn3D :
             time.sleep(0.05)
             for key in self.pressedkeys:
                 #Déplacement
-                x,y = math.sin(self.cam.rot[1])*sensMouv, math.cos(self.cam.rot[1])*sensMouv
+                sin,cos = math.sin(self.cam.rot[1])*sensMouv, math.cos(self.cam.rot[1])*sensMouv
                 if key == 'd':
-                    self.cam.pos[0]+=y
-                    self.cam.pos[2]-=x
+                    self.cam.pos[0]+=cos
+                    self.cam.pos[2]-=sin
                 elif key == 'a':
-                    self.cam.pos[0]-=y
-                    self.cam.pos[2]+=x
-                elif key == 'w':
-                    self.cam.pos[0]+=x
-                    self.cam.pos[2]+=y
-                elif key == 's':
-                    self.cam.pos[0]-=x
-                    self.cam.pos[2]-=y
+                    self.cam.pos[0]-=cos
+                    self.cam.pos[2]+=sin
+                elif key == 'w': #on avance
+                    self.cam.pos[0]+=sin
+                    self.cam.pos[2]+=cos
+                elif key == 's': #on recule
+                    self.cam.pos[0]-=sin
+                    self.cam.pos[2]-=cos
                 elif key == 'q':
                     self.cam.pos[1]+=sensMouv
                 elif key == 'e':
@@ -84,22 +84,25 @@ class RenderingIn3D :
         cos=math.cos(rotation)
         return vertex[0]*cos-vertex[1]*sin, vertex[1]*cos+vertex[0]*sin
 
+    def close(self):
+        self.rendering = False
 
     def window_mainloop(self):
         "Création de la fenêtre"
-        root = tkinter.Tk()
-        frame = tkinter.Frame(root, width=self.width, height=self.height)
+        root3D = tkinter.Tk()
+        frame = tkinter.Frame(root3D, width=self.width, height=self.height)
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
         #Création du canvas et paramétrage de la récupération de l'entrée utilisateur
         canvas = tkinter.Canvas(frame, width=self.width, height=self.height, bg="#bbbbbb")
         canvas.grid(row=0, column=0, sticky=tkinter.N+tkinter.S+tkinter.E+tkinter.W)
-        root.bind("<KeyPress>", self.keydown)
-        root.bind("<KeyRelease>", self.keyup)
+        root3D.bind("<KeyPress>", self.keydown)
+        root3D.bind("<KeyRelease>", self.keyup)
+        root3D.protocol("WM_DELETE_WINDOW", self.close)
         frame.pack()
 
         _thread.start_new_thread(self.movement, ( )) #Les déplacements sont calculés dans un autre thread (=coeur du processeur)
-        while True:
+        while self.rendering:
             """ Le rendu 3D est fait ici """
             canvas.delete("all") #On remet l'image à 0
             face_list=[] #Contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), int(couleur), int(profondeur) ], [ (x,y),...], ...]
@@ -145,7 +148,8 @@ class RenderingIn3D :
             for obj_faces in face_list:
                 for face in obj_faces :
                     canvas.create_polygon(face[:-1], fill="#000000", outline="white")
-            root.update()
+            root3D.update()
+        root3D.destroy()
 
     def newLine(self, board) :
         #self.objects = [ Cube((X,0,Y), board[Y][X], True) if X!=0 and Y!=0 and X!=len(board[0])-1 and Y!=len(board)-1 else Cube((X,0,Y), board[Y][X])   for X in range(len(board[0])) for Y in range(len(board)) ]
@@ -165,6 +169,7 @@ class RenderingIn3D :
         self.cam = cam
         self.sWidth, self.sHeight = int(width/2), int(height/2)
         self.rendering=False
+
 
 ##########################################
 #   FONCTIONS DU JEU DE LA VIE EN 2D     #
