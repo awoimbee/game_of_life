@@ -107,12 +107,12 @@ class RenderingIn3D :
             canvas.delete("all") #On remet l'image à 0
             face_list=[] #Contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), int(couleur), int(profondeur) ], [ (x,y),...], ...]
             #On calcule comment dessiner chaque cube
-            for obj in self.objects :
+            for obj in self.objects : #pour chaque objet dans la liste des objets
                 obj_faces=[]
-                for face in obj.faces:
+                for face in obj.faces: #pour chaque face de l'objet
                     depth = 0
                     face_points = [] #Contient 4 sommets à connecter -> (x,y),(x,y),(x,y),(x,y)
-                    for x,y,z in (obj.vertices[face[0]], obj.vertices[face[1]], obj.vertices[face[2]], obj.vertices[face[3]]):
+                    for x,y,z in (obj.vertices[face[0]], obj.vertices[face[1]], obj.vertices[face[2]], obj.vertices[face[3]]): #pour chaque point de la face, dont la position est constituée de 3 coordonnées : x,y,z
                         #La caméra est à l'origine des axes. Ce sont les objets qui se déplacent et non la caméra.
                         x-=self.cam.pos[0]
                         y-=self.cam.pos[1]
@@ -124,32 +124,36 @@ class RenderingIn3D :
                             #On affiche pas ce qui est hors champ
                             face_points = None
                             break
-                        f=self.sWidth/z #Coefficient de stéréoscopie
-                        X,Y = int(x*f)+self.sWidth, int(y*f)+self.sHeight #Position en pixels des sommets sur l'image 2D ; +Swidth et +Sheight car le repere xyz est placé au milieu de l'ecran
+                        f=self.sWidth/z #Coefficient de stéréoscopie - c'est le FOV
+                        #Calcul de la position (en pixels) du sommet sur le canvas ; on ajoute Swidth et Sheight car on veut que (0,0,0) soit placé au milieu du canvas :
+                        X,Y = int(x*f)+self.sWidth, int(y*f)+self.sHeight 
                         if not -self.sWidth<X<self.width+self.sWidth or not -self.sHeight<Y<self.height+self.sHeight :
                             #On affiche pas ce qui est hors champ
                             face_points = None
                             break
                         face_points.append((X, Y)) #Position en pixels des sommets sur l'image 2D
-                        depth += (x**2)+(y**2)+(z**2) #Se calcule avec *petit* x,y,z car ils sont position en 3d là où Y,X sont en 2D
+                        depth += (x**2)+(y**2)+(z**2) #On ajoute la distance point-caméra à la "distance" totale de la face
                     if not face_points:
-                        #On arrête de calculer les faces de l'objet
+                        #On arrête de calculer les faces de l'objet si une d'entre elles n'est pas à l'écran
                         break
-                    face_points.append(depth) #face_points contient les coordonnées des points de la face, mais aussi la profondeur de la face
-                    obj_faces.append(face_points)
+                    face_points.append(depth) #on ajoute à face_points les coordonnées des points de la face et la "distance totale" de la face
+                    obj_faces.append(face_points) #On ajoute la face à la liste des faces de l'objet
                 if not obj_faces :
+                    #si aucune face de l'objet n'est affichée
                     continue
-                #On trie les faces des objets et les ajoute à la liste de toutes les faces
+                #On trie les faces des objets selon leur "distance" ou "profondeur" (de la plus grande à la plus petite)
                 obj_faces.sort(key=lambda x: x[-1], reverse=True)
-                face_list.append(obj_faces) #[-3:] Car on ne dessine que les 3 faces maximum visibles simultanément de chaque cube
-            #On trie les objets
+                #On ajoute les faces de l'objet à la liste de toutes les faces en ne gardant que les trois faces les plus proches, les trois autres étant cachées par les trois premières 
+                face_list.append(obj_faces[-3:])
+            #On trie les objets selon la "distance" d'une de ses faces choisie arbitrairement (de la plus grande à la plus petite)
             face_list.sort(key=lambda x: x[0][-1], reverse=True)
             #On dessine les objets/faces :
             for obj_faces in face_list:
                 for face in obj_faces :
                     canvas.create_polygon(face[:-1], fill="#000000", outline="white")
             root3D.update()
-        root3D.destroy()
+        #fin du "While"
+        root3D.destroy() #on ferme la fenêtre
 
     def newLine(self, board) :
         #self.objects = [ Cube((X,0,Y), board[Y][X], True) if X!=0 and Y!=0 and X!=len(board[0])-1 and Y!=len(board)-1 else Cube((X,0,Y), board[Y][X])   for X in range(len(board[0])) for Y in range(len(board)) ]
