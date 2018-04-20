@@ -335,6 +335,32 @@ def ship():
 
     display()
 
+
+def clock():
+    "Trace un vaisseau spatial dans le jeu de la vie"
+    global board
+
+    #Centre du vaisseau, au centre du canvas
+    middleX = boardWidth//2
+    middleY = boardHeight//2
+    #Remise à 0 du tableau
+    board = [[0 for i in range(boardWidth)] for j in range(boardHeight)]
+
+    #Ouverture d'un fichier qui contient des coordonnées
+    f = open("clock.txt", "r")
+    clockY, clockX = [], []
+    #Ajout de chaques coordonnées dans une liste
+    for l in f:
+        row = l.split() #Transformation d'un caractère en liste
+        clockY.append(row[0]) #Ajout de la première coordonnée
+        clockX.append(row[1]) #De la deuxième
+
+    #Traçage du vaisseau dans le canvas
+    for i in range(len(clockY)):
+        board[middleY+int(clockY[i])][middleX+int(clockX[i])] = 1
+
+    display()
+   
 ##########################################
 #          PROGRAMME PRINCIPAL           #
 ##########################################
@@ -343,9 +369,9 @@ if __name__ == "__main__":
 
     ######## INITIALISATION DES VARIABLES ########
     #Taille d'une case en pixels
-    caseSize = 20
+    caseSize = 10
     #Largeur du tableau
-    boardWidth = 40
+    boardWidth = 90
     #Hauteur du tableau
     boardHeight = 30
     #Interrupteur
@@ -418,6 +444,8 @@ if __name__ == "__main__":
 
     ######## BOUTONS POUR DIVERSES FORMES ########
     tkinter.Button(userPart, text="Vaisseau", bg="#545556", fg="white", font=("Calibri", 12), relief="flat", command=ship).grid(row=2, column=2, padx=5, pady=5)
+    tkinter.Button(userPart, text="Horloge", bg="#545556", fg="white", font=("Calibri", 12), relief="flat", command=clock).grid(row=3, column=2, padx=5, pady=5)
+    
 
     #Fenêtre non-redimensionnable
     root.resizable(False, False)
