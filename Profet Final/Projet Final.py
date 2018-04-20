@@ -50,16 +50,16 @@ class RenderingIn3D :
                 if key == 'd':
                     self.cam.pos[0]+=cos
                     self.cam.pos[2]-=sin
-                elif key == 'a':
+                elif key == 'q':
                     self.cam.pos[0]-=cos
                     self.cam.pos[2]+=sin
-                elif key == 'w': #on avance
+                elif key == 'z': #on avance
                     self.cam.pos[0]+=sin
                     self.cam.pos[2]+=cos
                 elif key == 's': #on recule
                     self.cam.pos[0]-=sin
                     self.cam.pos[2]-=cos
-                elif key == 'q':
+                elif key == 'a':
                     self.cam.pos[1]+=sensMouv
                 elif key == 'e':
                     self.cam.pos[1]-=sensMouv
@@ -74,9 +74,11 @@ class RenderingIn3D :
                     self.cam.rot[0]-=sensRot
                 elif key == 'Down':
                     self.cam.rot[0]+=sensRot
-                # elif key == 'Escape':
-                #     _thread.interrupt_main() #exit
+                else :
+                    continue
 
+
+                
     def rotate2D(self, vertex, rotation):
         "Rotation en 2 dimensions de l'axe partant de l'origine vers le point vertex"
         #https://www.siggraph.org/education/materials/HyperGraph/modeling/mod_tran/2drota.htm
@@ -88,23 +90,32 @@ class RenderingIn3D :
         self.rendering = False
 
     def window_mainloop(self):
+        from PIL import ImageTk, Image
         "Création de la fenêtre"
         root3D = tkinter.Tk()
         frame = tkinter.Frame(root3D, width=self.width, height=self.height)
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
         #Création du canvas et paramétrage de la récupération de l'entrée utilisateur
-        canvas = tkinter.Canvas(frame, width=self.width, height=self.height, bg="#bbbbbb")
-        canvas.grid(row=0, column=0, sticky=tkinter.N+tkinter.S+tkinter.E+tkinter.W)
+        canvas3D = tkinter.Canvas(frame, width=self.width, height=self.height)
+        canvas3D.grid(row=0, column=0, sticky=tkinter.N+tkinter.S+tkinter.E+tkinter.W)
         root3D.bind("<KeyPress>", self.keydown)
         root3D.bind("<KeyRelease>", self.keyup)
         root3D.protocol("WM_DELETE_WINDOW", self.close)
         frame.pack()
+        ##Fond d'ecran
+        img = Image.open("./background.jpg")
+        x, y = int(self.height*(16/9)), self.height
+        img = img.resize((x,y))
+        tkimg = ImageTk.PhotoImage(master=root3D, image=img)
+        canvas3D.create_image(self.sWidth, self.sHeight, image=tkimg) #SWidth et SHeight servent a mettre le milieu de l'image au centre du canvas
+
 
         _thread.start_new_thread(self.movement, ( )) #Les déplacements sont calculés dans un autre thread (=coeur du processeur)
         while self.rendering:
             """ Le rendu 3D est fait ici """
-            canvas.delete("all") #On remet l'image à 0
+            
+            canvas3D.delete("cube") #On remet l'image à 0
             face_list=[] #Contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), int(couleur), int(profondeur) ], [ (x,y),...], ...]
             #On calcule comment dessiner chaque cube
             for obj in self.objects : #pour chaque objet dans la liste des objets
@@ -150,7 +161,7 @@ class RenderingIn3D :
             #On dessine les objets/faces :
             for obj_faces in face_list:
                 for face in obj_faces :
-                    canvas.create_polygon(face[:-1], fill="#000000", outline="white")
+                    canvas3D.create_polygon(face[:-1], fill="#ffffff", outline="black", tag="cube")
             root3D.update()
         #fin du "While"
         root3D.destroy() #on ferme la fenêtre
