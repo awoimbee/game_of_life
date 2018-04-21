@@ -6,184 +6,7 @@
 #Importation de divers modules utiles
 import tkinter
 import time
-from PIL import ImageTk, Image
-import math
-import _thread
-
-##########################################
-#               CLASSES                  #
-##########################################
-class Camera:
-    "Classe de la caméra"
-    def __init__(self, pos=(0,0,0), rot=(0,0)):
-        self.pos = list(pos) #pos = x,y,z
-        self.rot = list(rot) #rot=rotation
-
-class Cube:
-    "Classe de l'objet cube"
-    #Sommets du cube quand il est positionné sur l'origine des repères x,y,z puis ses faces
-    vertices = (-0.5,0.5,-0.5),(0.5,0.5,-0.5),(0.5,-0.5,-0.5),(-0.5,-0.5,-0.5), (-0.5,0.5,0.5),(0.5,0.5,0.5),(0.5,-0.5,0.5),(-0.5,-0.5,0.5)
-    faces = (4,5,6,7),(0,3,7,4),(1,2,6,5),(3,2,6,7),(0,1,5,4),(0,1,2,3)
-    life = int()
-    def __init__(self, pos=(0,0,0)):
-        #On calcule les coordonnees de chaque point du cube en fonction de sa position à l'origine et de la position de l'objet dans l'espace
-        self.vertices = [(pos[0]+X, pos[1]+Y, pos[2]+Z) for X,Y,Z in self.vertices]
-
-class RenderingIn3D :
-    "Classe principale du moteur 3D"
-    def keydown(self, event):
-        if event.keysym not in self.pressedkeys:
-            self.pressedkeys.append(event.keysym)
-    def keyup(self, event):
-        if event.keysym in self.pressedkeys:
-            self.pressedkeys.pop(self.pressedkeys.index(event.keysym))
-
-    def movement(self):
-        "Calcule le déplacement de la camera"
-        sensMouv = 1/2 #Sensibilite des mouvements
-        sensRot = 1/6 #Sensibilite de la rotation
-        while(self.rendering):
-            time.sleep(0.03)
-            for key in self.pressedkeys:
-                #Déplacement
-                sin,cos = math.sin(self.cam.rot[1])*sensMouv, math.cos(self.cam.rot[1])*sensMouv
-                if key == 'd':
-                    self.cam.pos[0]+=cos
-                    self.cam.pos[2]-=sin
-                elif key == 'q':
-                    self.cam.pos[0]-=cos
-                    self.cam.pos[2]+=sin
-                elif key == 'z': #on avance
-                    self.cam.pos[0]+=sin
-                    self.cam.pos[2]+=cos
-                elif key == 's': #on recule
-                    self.cam.pos[0]-=sin
-                    self.cam.pos[2]-=cos
-                elif key == 'a':
-                    self.cam.pos[1]+=sensMouv
-                elif key == 'e':
-                    self.cam.pos[1]-=sensMouv
-                #Rotation
-                # Axe X  |  Axe Y
-                # rot[1] |  rot[0]
-                elif key == 'Left': #on tourne à gauche
-                    self.cam.rot[1]-=sensRot
-                elif key == 'Right':
-                    self.cam.rot[1]+=sensRot
-                elif key == 'Up':
-                    self.cam.rot[0]-=sensRot
-                elif key == 'Down':
-                    self.cam.rot[0]+=sensRot
-                else :
-                    continue
-
-
-                
-    def rotate2D(self, vertex, rotation):
-        "Rotation en 2 dimensions de l'axe partant de l'origine vers le point vertex"
-        #https://www.siggraph.org/education/materials/HyperGraph/modeling/mod_tran/2drota.htm
-        sin=math.sin(rotation)
-        cos=math.cos(rotation)
-        return vertex[0]*cos-vertex[1]*sin, vertex[1]*cos+vertex[0]*sin
-
-    def close(self):
-        self.rendering = False
-
-    def window_mainloop(self):
-        from PIL import ImageTk, Image
-        "Création de la fenêtre"
-        root3D = tkinter.Tk()
-        frame = tkinter.Frame(root3D, width=self.width, height=self.height)
-        frame.grid_rowconfigure(0, weight=1)
-        frame.grid_columnconfigure(0, weight=1)
-        #Création du canvas et paramétrage de la récupération de l'entrée utilisateur
-        canvas3D = tkinter.Canvas(frame, width=self.width, height=self.height)
-        canvas3D.grid(row=0, column=0, sticky=tkinter.N+tkinter.S+tkinter.E+tkinter.W)
-        root3D.bind("<KeyPress>", self.keydown)
-        root3D.bind("<KeyRelease>", self.keyup)
-        root3D.protocol("WM_DELETE_WINDOW", self.close)
-        frame.pack()
-        ##Fond d'ecran
-        img = Image.open("./background.jpg")
-        x, y = int(self.height*(16/9)), self.height
-        img = img.resize((x,y))
-        tkimg = ImageTk.PhotoImage(master=root3D, image=img)
-        canvas3D.create_image(self.sWidth, self.sHeight, image=tkimg) #SWidth et SHeight servent a mettre le milieu de l'image au centre du canvas
-
-
-        _thread.start_new_thread(self.movement, ( )) #Les déplacements sont calculés dans un autre thread (=coeur du processeur)
-        while self.rendering:
-            """ Le rendu 3D est fait ici """
-            
-            canvas3D.delete("cube") #On remet l'image à 0
-            face_list=[] #Contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), int(couleur), int(profondeur) ], [ (x,y),...], ...]
-            #On calcule comment dessiner chaque cube
-            for obj in self.objects : #pour chaque objet dans la liste des objets
-                obj_faces=[]
-                for face in obj.faces: #pour chaque face de l'objet
-                    depth = 0
-                    face_points = [] #Contient 4 sommets à connecter -> (x,y),(x,y),(x,y),(x,y)
-                    for x,y,z in (obj.vertices[face[0]], obj.vertices[face[1]], obj.vertices[face[2]], obj.vertices[face[3]]): #pour chaque point de la face, dont la position est constituée de 3 coordonnées : x,y,z
-                        #La caméra est à l'origine des axes. Ce sont les objets qui se déplacent et non la caméra.
-                        x-=self.cam.pos[0]
-                        y-=self.cam.pos[1]
-                        z-=self.cam.pos[2]
-
-                        x,z = self.rotate2D((x,z),self.cam.rot[1]) #x et z modifies par la rotation autour de y
-                        y,z = self.rotate2D((y,z),self.cam.rot[0]) #y et z modifies par la rotation autour de x
-                        if z<=0:
-                            #On affiche pas ce qui est hors champ
-                            face_points = None
-                            break
-                        f=self.sWidth/z #Coefficient de stéréoscopie - c'est le FOV
-                        #Calcul de la position (en pixels) du sommet sur le canvas ; on ajoute Swidth et Sheight car on veut que (0,0,0) soit placé au milieu du canvas :
-                        X,Y = int(x*f)+self.sWidth, int(y*f)+self.sHeight 
-                        if not -self.sWidth<X<self.width+self.sWidth or not -self.sHeight<Y<self.height+self.sHeight :
-                            #On affiche pas ce qui est hors champ
-                            face_points = None
-                            break
-                        face_points.append((X, Y)) #Position en pixels des sommets sur l'image 2D
-                        depth += (x**2)+(y**2)+(z**2) #On ajoute la distance point-caméra à la "distance" totale de la face
-                    if not face_points:
-                        #On arrête de calculer les faces de l'objet si une d'entre elles n'est pas à l'écran
-                        break
-                    face_points.append(depth) #on ajoute à face_points les coordonnées des points de la face et la "distance totale" de la face
-                    obj_faces.append(face_points) #On ajoute la face à la liste des faces de l'objet
-                if not obj_faces :
-                    #si aucune face de l'objet n'est affichée
-                    continue
-                #On trie les faces des objets selon leur "distance" ou "profondeur" (de la plus grande à la plus petite)
-                obj_faces.sort(key=lambda x: x[-1], reverse=True)
-                #On ajoute les faces de l'objet à la liste de toutes les faces en ne gardant que les trois faces les plus proches, les trois autres étant cachées par les trois premières 
-                face_list.append(obj_faces[-3:])
-            #On trie les objets selon la "distance" d'une de ses faces choisie arbitrairement (de la plus grande à la plus petite)
-            face_list.sort(key=lambda x: x[0][-1], reverse=True)
-            #On dessine les objets/faces :
-            for obj_faces in face_list:
-                for face in obj_faces :
-                    canvas3D.create_polygon(face[:-1], fill="#ffffff", outline="black", tag="cube")
-            root3D.update()
-        #fin du "While"
-        root3D.destroy() #on ferme la fenêtre
-
-    def newLine(self, board) :
-        #self.objects = [ Cube((X,0,Y), board[Y][X], True) if X!=0 and Y!=0 and X!=len(board[0])-1 and Y!=len(board)-1 else Cube((X,0,Y), board[Y][X])   for X in range(len(board[0])) for Y in range(len(board)) ]
-        if self.rendering :
-            self.objects = [ Cube((X,0,Y)) for X in range(len(board[0])) for Y in range(len(board)) if board[Y][X] ]
-
-    def launchWindow(self):
-        "Lance la fenêtre du jeu de la vie en 3D"
-        self.rendering=True
-        _thread.start_new_thread(self.window_mainloop, ( )) #on attend pas la fin de l'exécution de window_mainloop
-
-    def __init__(self, cam, height, width):
-        self.pressedkeys = []
-        self.objects = []
-        self.height = height
-        self.width = width
-        self.cam = cam
-        self.sWidth, self.sHeight = int(width/2), int(height/2)
-        self.rendering=False
+import show3D
 
 
 ##########################################
@@ -266,7 +89,7 @@ def neighborsFinding():
         board=board_new
 
         #Actualisation du tableau de la partie 3D
-        renderer3D.newLine(board)
+        show3D.newLine(board)
 
         #Mise à jour de l'étape et de l'état
         step += 1
@@ -303,7 +126,7 @@ def changeColor(event):
         board[boardRow][boardColumn] = 0
 
     #Affichage
-    renderer3D.newLine(board)
+    show3D.newLine(board)
     display()
 
 def clearAll():
@@ -316,10 +139,6 @@ def clearAll():
 
     #Affichage
     display()
-
-def launch3D():
-    "Lance le jeu de la vie en 3D"
-    renderer3D.launchWindow()
 
 def ship():
     "Trace un vaisseau spatial dans le jeu de la vie"
@@ -397,7 +216,7 @@ if __name__ == "__main__":
     #Initialisation du tableau
     board = [[0 for i in range(boardWidth)] for j in range(boardHeight)]
     #Initialisation du jeu de la vie en 3D
-    renderer3D = RenderingIn3D(Camera((0,0,-5)), 700, 900)
+    show3D.initialise(700,900)
 
 
 
@@ -451,7 +270,7 @@ if __name__ == "__main__":
     stateDisplay.grid(column=1, row=1, padx=7, pady=5)
 
     ######## BOUTON DE LA SIMULATION 3D ########
-    tkinter.Button(userPart, text="Visualisation en 3D", bg="#545556", fg="white", font=("Calibri", 12), relief="flat", command=launch3D).grid(row=1, column=2, padx=5, pady=5)
+    tkinter.Button(userPart, text="Visualisation en 3D", bg="#545556", fg="white", font=("Calibri", 12), relief="flat", command=show3D.launchWindow).grid(row=1, column=2, padx=5, pady=5)
 
     ######## BOUTONS POUR DIVERSES FORMES ########
     tkinter.Button(userPart, text="Vaisseau", bg="#545556", fg="white", font=("Calibri", 12), relief="flat", command=ship).grid(row=2, column=2, padx=5, pady=5)
