@@ -1,4 +1,6 @@
-﻿import tkinter
+#!/usr/bin/env python3
+
+import tkinter
 from PIL import ImageTk, Image
 import math, random
 import time
@@ -68,31 +70,6 @@ def movement():
             elif key == 'Down':
                 cam.rot[0]+=sensRot
 
-        global objects
-        for obj in objects :
-            obj.show = False
-            #On calcule la position du centre de chaque objet pour determiner si il doit etre affiché et dans quel ordre il doit etre dessiné
-            x,y,z = obj.pos    
-            x-=cam.pos[0]
-            y-=cam.pos[1]
-            z-=cam.pos[2]
-
-            x,z = x*cos[1]-z*sin[1], z*cos[1]+x*sin[1]   #x et z modifies par la rotation autour de y
-            y,z = y*cos[0]-z*sin[0], z*cos[0]+y*sin[0]   #y et z modifies par la rotation autour de x
-
-            if z>0:
-                #si z=0 on a une division par 0 et si z<0 alors l'affichage est hors champ
-                f=SWidth/z #coefficient de stereoscopie 
-                X,Y = int(x*f)+SWidth, int(y*f)+SHeight #position en pixels des sommets sur l'image 2D
-
-                if X<WIDTH+SWidth and Y<HEIGHT+SHeight and X>-SWidth and Y>-SHeight: #peu d'impact sur framerate
-                    obj.show = True
-
-
-
-
-
-
 
 class FloorPannel:
     vertices = (1,1,1),(1,1,-1),(-1,1,-1),(-1,1,1)
@@ -116,25 +93,21 @@ class Ext3DModel:
     def __init__(self, fileName, position=(0,0,0), color="white", fileOindex=1):
         '''Créé un objet à partir d\'un fichier .obj.'''
 
+        path = os.path.join(os.path.dirname(__file__), "files/"+fileName+".obj")
+        F = open(path,"r")
         # https://fr.wikipedia.org/wiki/Objet_3D_(format_de_fichier)
         # o = objet        v = vertices           f = faces           les vt, vn et autres ne sont pas lus
-        F = open(".\\files\\"+ fileName +".obj","r")
         oNumber=0
         for line in F:
             if line[0] == "o" and line[1] == " " and oNumber<fileOindex: 
                 oNumber+=1
             elif line[0] == "v" and line[1] == " " and (oNumber==fileOindex or oNumber==0):
-                arr=[]
-                vertices = line[1:].split()
-                for vertex in vertices:
-                    arr.append(float(vertex))
-                self.vertices.append(tuple( arr ))
+                vertex = [float(coord) for coord in line[1:].split()]
+                vertex[1] *= -1
+                self.vertices.append(tuple( vertex ))
             elif line[0] == "v" and line[1] == "n" and (oNumber==fileOindex or oNumber==0):
-                arr=[]
-                ass = line[2:].split()
-                for fuck in ass:
-                    arr.append(float(fuck))
-                self.normals.append(tuple( arr ))
+                normal = [float(n) for n in line[2:].split()]
+                self.normals.append(tuple( normal ))
             elif line[0] == "f" and line[1] == " " and (oNumber==fileOindex or oNumber==0):
                 arr_line = line[1:].split() #arr_line = [v/vt/vn],[v,vt,vn],[v,vt,vn],...
                 face_vertices=[]
@@ -166,7 +139,7 @@ if __name__ == '__main__':
     colors  = ((167,0,0), (0,200,0), (0,0,108), (20,100,230), (50,150,50))
     cam = Camera((0,0,-3)) #position initiale de la caméra
 
-#Crétation de la liste des objets à afficher
+    #Crétation de la liste des objets à afficher
     objects = [] 
     ############################## 
     # for x in range(-5, 5):
@@ -178,7 +151,6 @@ if __name__ == '__main__':
     #objects.extend([ Ext3DModel("cube_big",(x,y,z),random.choice(colors)) for y in range(0,-4,-2) for z in range(0,4,2) for x in range(0,4,2)  ])
     #objects.extend( [Ext3DModel("cube",(0,0,0),((255,255,255))), Ext3DModel("cube",(2,0,0), (0,0,255)), Ext3DModel("cube",(-2,0,0), (0,255,0))] )        
     objects.append(Ext3DModel("body_highpoly",(1,1,1),(255,255,255) ))
-
 
 
     ##Création de la fenetre
@@ -218,7 +190,8 @@ if __name__ == '__main__':
         face_list=[] #contient : [points1, points2, ...] => [ [ (x,y),(x,y),(x,y),(x,y), tuple(couleur), int(profondeur) ], [ (x,y),...], ...]
         #on calcule comment dessiner chaque cube        
         for obj in objects :
-            if obj.show:
+            # if obj.show:
+            if True:
                 for face in obj.faces:
                     depth = 0
                     face_points = [] #contient 3 ou plus sommets a connecter -> (x,y),(x,y),(x,y)
